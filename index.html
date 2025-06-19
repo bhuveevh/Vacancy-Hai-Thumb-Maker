@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacancy-Hai Thumb Maker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/konva@9.3.6/konva.min.js"></script>
+    </head>
+<body>
+    <div class="app-header">
+        <h1>Vacancy-Hai Thumb Maker</h1>
+        <div class="header-controls">
+            <button id="addRectBtn">Add Rectangle</button>
+            <button id="addCircleBtn">Add Circle</button>
+            <button id="addTextBtn">Add Text</button>
+            <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+            <button id="addImageBtn">Add Image</button>
+            <button id="addLineBtn">Add Line</button>
+            <input type="color" id="bgColorPicker" value="#ffffff" title="Canvas Background Color">
+            <button id="uploadFontBtn">Upload Font</button>
+            <button id="downloadWebPBtn">Download WebP</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="properties-panel">
+            <h2>Properties</h2>
+            <div id="noElementSelected" class="info-message">Select an element to edit its properties.</div>
+            <div id="elementProperties" class="hidden">
+                <label for="propX">Position X:</label>
+                <input type="range" id="propX" min="0" max="640" value="0">
+                <span id="valX">0</span>px<br>
+
+                <label for="propY">Position Y:</label>
+                <input type="range" id="propY" min="0" max="415" value="0">
+                <span id="valY">0</span>px<br>
+
+                <label for="propRotation">Rotation:</label>
+                <input type="range" id="propRotation" min="0" max="360" value="0">
+                <span id="valRotation">0</span>°<br>
+
+                <label for="propFillColor" class="color-label">Fill Color:</label>
+                <input type="color" id="propFillColor" value="#cccccc"><br>
+
+                <div id="textProperties" class="hidden prop-section">
+                    <h3>Text Properties</h3>
+                    <label for="propTextContent">Content:</label>
+                    <textarea id="propTextContent"></textarea><br>
+
+                    <label for="propFontFamily">Font:</label>
+                    <select id="propFontFamily">
+                        <option value="Arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Pacifico">Pacifico (Web)</option>
+                        <option value="Lobster">Lobster (Web)</option>
+                        <option value="Dancing Script">Dancing Script (Web)</option>
+                    </select><br>
+
+                    <label for="propFontSize">Size:</label>
+                    <input type="range" id="propFontSize" min="10" max="150" value="24">
+                    <span id="valFontSize">24</span>px<br>
+
+                    <label for="propTextColor" class="color-label">Text Color:</label>
+                    <input type="color" id="propTextColor" value="#000000"><br>
+
+                    <div class="align-buttons">
+                        <button id="alignLeft">Left</button>
+                        <button id="alignCenter">Center</button>
+                        <button id="alignRight">Right</button>
+                    </div><br>
+
+                    <div class="font-style-buttons">
+                        <button id="toggleBold">Bold</button>
+                        <button id="toggleItalic">Italic</button>
+                    </div>
+                </div>
+
+                <div id="imageProperties" class="hidden prop-section">
+                    <h3>Image Properties</h3>
+                    <label for="propCornerRadius">Corner Radius:</label>
+                    <input type="range" id="propCornerRadius" min="0" max="100" value="0">
+                    <span id="valCornerRadius">0</span>px<br>
+                </div>
+
+                <div class="prop-section">
+                    <h3>Shadow</h3>
+                    <label for="shadowEnable">Enable Shadow:</label>
+                    <input type="checkbox" id="shadowEnable"><br>
+
+                    <label for="shadowColor" class="color-label">Color:</label>
+                    <input type="color" id="shadowColor" value="#000000"><br>
+
+                    <label for="shadowBlur">Blur:</label>
+                    <input type="range" id="shadowBlur" min="0" max="50" value="5">
+                    <span id="valShadowBlur">5</span>px<br>
+
+                    <label for="shadowOffsetX">Offset X:</label>
+                    <input type="range" id="shadowOffsetX" min="-50" max="50" value="5">
+                    <span id="valShadowOffsetX">5</span>px<br>
+
+                    <label for="shadowOffsetY">Offset Y:</label>
+                    <input type="range" id="shadowOffsetY" min="-50" max="50" value="5">
+                    <span id="valShadowOffsetY">5</span>px<br>
+                </div>
+
+                <div class="prop-section">
+                    <button id="toggleLock">Toggle Lock</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <div class="scratchpad">
+                <h3>Scratchpad / Quick Text</h3>
+                <textarea id="quickTextArea" placeholder="Draft or paste text here..."></textarea>
+            </div>
+            <div id="konvaContainer" class="konva-container"></div>
+            <div class="zoom-slider">
+                <label for="zoomSlider">Zoom:</label>
+                <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
+                <span id="zoomValue">100%</span>
+            </div>
+        </div>
+
+        <div class="layers-panel">
+            <h2>Layers</h2>
+            <ul id="layersList">
+                </ul>
+            <div class="layer-controls">
+                <button id="moveLayerUp">▲ Up</button>
+                <button id="moveLayerDown">▼ Down</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
