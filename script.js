@@ -57,6 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const propCornerRadius = document.getElementById('propCornerRadius');
     const valCornerRadius = document.getElementById('valCornerRadius');
 
+    // Line Specific
+    const linePropertiesDiv = document.getElementById('lineProperties');
+    const propLineLength = document.getElementById('propLineLength');
+    const valLineLength = document.getElementById('valLineLength');
+    const propLineThickness = document.getElementById('propLineThickness');
+    const valLineThickness = document.getElementById('valLineThickness');
+    const propLineColor = document.getElementById('propLineColor');
+
+
     // Shadow Properties
     const shadowEnable = document.getElementById('shadowEnable');
     const shadowColor = document.getElementById('shadowColor');
@@ -100,41 +109,22 @@ document.addEventListener('DOMContentLoaded', () => {
         propRotation.value = selectedShape.rotation();
         valRotation.textContent = Math.round(selectedShape.rotation());
 
-        // Fill color for Rect, Circle (Text has textColor)
-        if (selectedShape.hasFill()) {
-            propFillColor.value = selectedShape.fill();
-            propFillColor.parentElement.style.display = 'block'; // Show if applicable
-            propFillColor.disabled = disableControls;
-        } else {
-            propFillColor.parentElement.style.display = 'none'; // Hide if not applicable
-        }
-
         propX.disabled = disableControls;
         propY.disabled = disableControls;
         propRotation.disabled = disableControls;
 
-        // Shadow properties
-        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {}; // Get current shadow or empty
-        shadowEnable.checked = selectedShape.getAttr('shadowEnabled') || false;
-        shadowColor.value = shadow.shadowColor || '#000000';
-        shadowBlur.value = shadow.shadowBlur || 0;
-        valShadowBlur.textContent = Math.round(shadow.shadowBlur || 0);
-        shadowOffsetX.value = shadow.shadowOffsetX || 0;
-        valShadowOffsetX.textContent = Math.round(shadow.shadowOffsetX || 0);
-        shadowOffsetY.value = shadow.shadowOffsetY || 0;
-        valShadowOffsetY.textContent = Math.round(shadow.shadowOffsetY || 0);
-
-        shadowEnable.disabled = disableControls;
-        shadowColor.disabled = disableControls || !shadowEnable.checked;
-        shadowBlur.disabled = disableControls || !shadowEnable.checked;
-        shadowOffsetX.disabled = disableControls || !shadowEnable.checked;
-        shadowOffsetY.disabled = disableControls || !shadowEnable.checked;
-
-        // Element-specific properties visibility
+        // Element-specific properties visibility and data
+        propFillColor.parentElement.style.display = 'none'; // Hide by default
         textPropertiesDiv.classList.add('hidden');
         imagePropertiesDiv.classList.add('hidden');
+        linePropertiesDiv.classList.add('hidden');
 
-        if (selectedShape.getClassName() === 'Text') {
+
+        if (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle') {
+            propFillColor.parentElement.style.display = 'block';
+            propFillColor.value = selectedShape.fill();
+            propFillColor.disabled = disableControls;
+        } else if (selectedShape.getClassName() === 'Text') {
             textPropertiesDiv.classList.remove('hidden');
             propTextContent.value = selectedShape.text();
             propFontFamily.value = selectedShape.fontFamily();
@@ -159,7 +149,38 @@ document.addEventListener('DOMContentLoaded', () => {
             propCornerRadius.value = selectedShape.cornerRadius();
             valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
             propCornerRadius.disabled = disableControls;
+        } else if (selectedShape.getClassName() === 'Line') {
+            linePropertiesDiv.classList.remove('hidden');
+            // Points are [x1, y1, x2, y2]. For horizontal, y1==y2
+            const points = selectedShape.points();
+            const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
+            propLineLength.value = Math.round(currentLength);
+            valLineLength.textContent = Math.round(currentLength);
+            propLineThickness.value = selectedShape.strokeWidth();
+            valLineThickness.textContent = Math.round(selectedShape.strokeWidth());
+            propLineColor.value = selectedShape.stroke();
+
+            propLineLength.disabled = disableControls;
+            propLineThickness.disabled = disableControls;
+            propLineColor.disabled = disableControls;
         }
+
+        // Shadow properties
+        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {}; // Get current shadow or empty
+        shadowEnable.checked = selectedShape.getAttr('shadowEnabled') || false;
+        shadowColor.value = shadow.shadowColor || '#000000';
+        shadowBlur.value = shadow.shadowBlur || 0;
+        valShadowBlur.textContent = Math.round(shadow.shadowBlur || 0);
+        shadowOffsetX.value = shadow.shadowOffsetX || 0;
+        valShadowOffsetX.textContent = Math.round(shadow.shadowOffsetX || 0);
+        shadowOffsetY.value = shadow.shadowOffsetY || 0;
+        valShadowOffsetY.textContent = Math.round(shadow.shadowOffsetY || 0);
+
+        shadowEnable.disabled = disableControls;
+        shadowColor.disabled = disableControls || !shadowEnable.checked;
+        shadowBlur.disabled = disableControls || !shadowEnable.checked;
+        shadowOffsetX.disabled = disableControls || !shadowEnable.checked;
+        shadowOffsetY.disabled = disableControls || !shadowEnable.checked;
 
         // Update Lock/Unlock button text
         toggleLockBtn.textContent = isLocked ? 'Unlock Element' : 'Lock Element';
@@ -168,11 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLayersPanel() {
         layersList.innerHTML = '';
-        const nodes = layer.getChildren().toArray().filter(node => node !== tr); // Exclude transformer
-        nodes.forEach((node, index) => {
+        // Get all children of the layer, excluding the transformer
+        const nodes = layer.getChildren().toArray().filter(node => node !== tr); 
+        // Iterate in reverse order to display top layers at the top of the list
+        for (let i = nodes.length - 1; i >= 0; i--) {
+            const node = nodes[i];
             const li = document.createElement('li');
             li.dataset.id = node.id();
-            li.dataset.index = index; // Store Konva layer index
+            li.dataset.index = node.getZIndex(); // Store Konva layer Z-index
 
             let icon = '❓';
             let name = 'Unknown';
@@ -222,13 +246,15 @@ document.addEventListener('DOMContentLoaded', () => {
             li.querySelector('.layer-del-btn').addEventListener('click', () => deleteLayer(node));
 
             layersList.appendChild(li);
-        });
+        }
 
         // Enable/disable layer movement buttons
         if (selectedShape) {
-            const index = selectedShape.getZIndex();
-            moveLayerUpBtn.disabled = index >= layer.children.length - 2; // -2 because of transformer
-            moveLayerDownBtn.disabled = index <= 0;
+            // Get the current index relative to other shapes (excluding transformer)
+            const shapes = layer.children.filter(node => node !== tr);
+            const index = shapes.indexOf(selectedShape);
+            moveLayerUpBtn.disabled = index >= shapes.length - 1 || selectedShape.getAttr('isLocked');
+            moveLayerDownBtn.disabled = index <= 0 || selectedShape.getAttr('isLocked');
         } else {
             moveLayerUpBtn.disabled = true;
             moveLayerDownBtn.disabled = true;
@@ -242,8 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.nodes([]);
         }
         selectedShape = shape;
-        if (selectedShape) {
+        if (selectedShape && !selectedShape.getAttr('isLocked')) { // Only attach transformer if not locked
             tr.nodes([selectedShape]);
+        } else if (selectedShape && selectedShape.getAttr('isLocked')) {
+            tr.nodes([]); // Ensure no transformer if newly selected locked shape
         }
         updatePropertiesPanel();
         updateLayersPanel(); // To highlight selected layer
@@ -274,8 +302,13 @@ document.addEventListener('DOMContentLoaded', () => {
             y: 50,
             width: 100,
             height: 100,
-            fill: '#ff69b4', // Pink default
+            fill: '#FFFFFF', // Default white
             draggable: true,
+            shadowColor: '#000000', // Default shadow properties
+            shadowBlur: 5,
+            shadowOffsetX: 5,
+            shadowOffsetY: 5,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(rect);
     });
@@ -285,8 +318,13 @@ document.addEventListener('DOMContentLoaded', () => {
             x: 150,
             y: 150,
             radius: 50,
-            fill: '#007bff', // Blue default
+            fill: '#FFFFFF', // Default white
             draggable: true,
+            shadowColor: '#000000', // Default shadow properties
+            shadowBlur: 5,
+            shadowOffsetX: 5,
+            shadowOffsetY: 5,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(circle);
     });
@@ -302,6 +340,11 @@ document.addEventListener('DOMContentLoaded', () => {
             draggable: true,
             width: 300, // For alignment
             align: 'left',
+            shadowColor: '#000000', // Default shadow properties
+            shadowBlur: 5,
+            shadowOffsetX: 5,
+            shadowOffsetY: 5,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(textNode);
     });
@@ -329,6 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         height: img.height * scale,
                         draggable: true,
                         cornerRadius: 0, // Default no rounded corners
+                        shadowColor: '#000000', // Default shadow properties
+                        shadowBlur: 5,
+                        shadowOffsetX: 5,
+                        shadowOffsetY: 5,
+                        shadowEnabled: false, // Start disabled
                     });
                     addShapeToLayer(konvaImage);
                 };
@@ -341,10 +389,14 @@ document.addEventListener('DOMContentLoaded', () => {
     addLineBtn.addEventListener('click', () => {
         const line = new Konva.Line({
             points: [50, 200, 250, 200], // Horizontal line
-            stroke: '#333333',
+            stroke: '#000000', // Default black line
             strokeWidth: 5,
             draggable: true,
-            // You'll need custom transformer handling for lines or restrict resizing to width
+            shadowColor: '#000000', // Default shadow properties
+            shadowBlur: 5,
+            shadowOffsetX: 5,
+            shadowOffsetY: 5,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(line);
     });
@@ -372,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     propY.addEventListener('input', (e) => updateShapeProperty('y', parseFloat(e.target.value)));
     propRotation.addEventListener('input', (e) => updateShapeProperty('rotation', parseFloat(e.target.value)));
     propFillColor.addEventListener('input', (e) => {
-        if (selectedShape && !selectedShape.getAttr('isLocked')) {
+        if (selectedShape && (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle') && !selectedShape.getAttr('isLocked')) {
             selectedShape.fill(e.target.value);
             layer.batchDraw();
         }
@@ -482,6 +534,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Line Properties
+    propLineLength.addEventListener('input', (e) => {
+        if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
+            const currentPoints = selectedShape.points();
+            const startX = currentPoints[0];
+            const startY = currentPoints[1];
+            const newLength = parseFloat(e.target.value);
+            // Assuming horizontal line for simplicity
+            selectedShape.points([startX, startY, startX + newLength, startY]);
+            valLineLength.textContent = Math.round(newLength);
+            layer.batchDraw();
+        }
+    });
+
+    propLineThickness.addEventListener('input', (e) => {
+        if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
+            selectedShape.strokeWidth(parseFloat(e.target.value));
+            valLineThickness.textContent = Math.round(selectedShape.strokeWidth());
+            layer.batchDraw();
+        }
+    });
+
+    propLineColor.addEventListener('input', (e) => {
+        if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
+            selectedShape.stroke(e.target.value);
+            layer.batchDraw();
+        }
+    });
+
+
     // Shadow Properties
     function updateShadowProperties() {
         if (!selectedShape || selectedShape.getAttr('isLocked')) return;
@@ -495,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 shadowBlur: parseFloat(shadowBlur.value),
                 shadowOffsetX: parseFloat(shadowOffsetX.value),
                 shadowOffsetY: parseFloat(shadowOffsetY.value),
-                shadowForStrokeEnabled: false // Generally not for stroke unless desired
+                // shadowForStrokeEnabled: false // Generally not for stroke unless desired
             });
         } else {
             // Remove shadow properties visually
@@ -552,7 +634,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function duplicateLayer(node) {
-        if (node.getAttr('isLocked')) return; // Cannot duplicate locked layers
+        if (node.getAttr('isLocked')) {
+            alert('Cannot duplicate locked elements.');
+            return;
+        }
 
         const clonedNode = node.clone({
             x: node.x() + 20, // Offset new clone slightly
@@ -560,7 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
             id: `${node.getClassName()}_${nextElementId++}` // New unique ID
         });
 
-        // If it's a text node, ensure its width/height are also cloned
+        // If it's a text node, ensure its width/height are also cloned for layout
         if (clonedNode.getClassName() === 'Text') {
             clonedNode.width(node.width());
             clonedNode.height(node.height());
@@ -585,17 +670,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     moveLayerUpBtn.addEventListener('click', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
-            selectedShape.moveUp();
-            layer.batchDraw();
-            updateLayersPanel(); // To reflect new order
+            const currentIndex = selectedShape.getZIndex();
+            const allShapes = layer.children.filter(node => node !== tr);
+            if (currentIndex < allShapes.length -1) { // Check if not already at top
+                selectedShape.moveUp();
+                layer.batchDraw();
+                updateLayersPanel(); // To reflect new order
+            }
+        } else if (selectedShape && selectedShape.getAttr('isLocked')) {
+            alert('Cannot move locked elements.');
         }
     });
 
     moveLayerDownBtn.addEventListener('click', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
-            selectedShape.moveDown();
-            layer.batchDraw();
-            updateLayersPanel(); // To reflect new order
+            const currentIndex = selectedShape.getZIndex();
+            if (currentIndex > 0) { // Check if not already at bottom
+                selectedShape.moveDown();
+                layer.batchDraw();
+                updateLayersPanel(); // To reflect new order
+            }
+        } else if (selectedShape && selectedShape.getAttr('isLocked')) {
+            alert('Cannot move locked elements.');
         }
     });
 
@@ -609,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // If click on a shape
-        const clickedOnTransformer = e.target.getParent().className === 'Transformer';
+        const clickedOnTransformer = e.target.getParent() && e.target.getParent().className === 'Transformer';
         if (clickedOnTransformer) {
             return;
         }
@@ -710,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stage.scale({ x: currentScale, y: currentScale });
         stage.width(width * currentScale);
         stage.height(height * currentScale);
-        if (selectedShape) {
+        if (selectedShape && !selectedShape.getAttr('isLocked')) { // Re-attach transformer if selected and not locked
             tr.nodes([selectedShape]);
         }
         layer.batchDraw();
