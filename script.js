@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const valLineThickness = document.getElementById('valLineThickness');
     const propLineColor = document.getElementById('propLineColor');
 
-
     // Shadow Properties
     const shadowEnable = document.getElementById('shadowEnable');
     const shadowColor = document.getElementById('shadowColor');
@@ -151,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             propCornerRadius.disabled = disableControls;
         } else if (selectedShape.getClassName() === 'Line') {
             linePropertiesDiv.classList.remove('hidden');
-            // Points are [x1, y1, x2, y2]. For horizontal, y1==y2
+            // For lines, calculate length based on points
             const points = selectedShape.points();
             const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
             propLineLength.value = Math.round(currentLength);
@@ -241,9 +240,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Layer specific actions
-            li.querySelector('.layer-lock-btn').addEventListener('click', () => toggleLayerLock(node));
-            li.querySelector('.layer-dup-btn').addEventListener('click', () => duplicateLayer(node));
-            li.querySelector('.layer-del-btn').addEventListener('click', () => deleteLayer(node));
+            li.querySelector('.layer-lock-btn').addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent li click from re-selecting on button click
+                toggleLayerLock(node);
+            });
+            li.querySelector('.layer-dup-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                duplicateLayer(node);
+            });
+            li.querySelector('.layer-del-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteLayer(node);
+            });
 
             layersList.appendChild(li);
         }
@@ -538,13 +546,15 @@ document.addEventListener('DOMContentLoaded', () => {
     propLineLength.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
             const currentPoints = selectedShape.points();
+            // Assuming the line is horizontal, update the end X point to change length
             const startX = currentPoints[0];
             const startY = currentPoints[1];
             const newLength = parseFloat(e.target.value);
-            // Assuming horizontal line for simplicity
+            // This assumes the line starts at x,y and extends horizontally
             selectedShape.points([startX, startY, startX + newLength, startY]);
             valLineLength.textContent = Math.round(newLength);
             layer.batchDraw();
+            tr.nodes([selectedShape]); // Update transformer to reflect new dimensions
         }
     });
 
@@ -607,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateShadowProperties();
     });
 
-    // --- Lock/Unlock ---
+    // --- Lock/Unlock (Properties Panel Button) ---
     toggleLockBtn.addEventListener('click', () => {
         if (selectedShape) {
             const isLocked = !selectedShape.getAttr('isLocked');
@@ -616,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.nodes(isLocked ? [] : [selectedShape]); // Remove transformer if locked
             layer.batchDraw();
             updatePropertiesPanel();
-            updateLayersPanel(); // To update lock icon
+            updateLayersPanel(); // To update lock icon in layers list
         }
     });
 
@@ -645,6 +655,10 @@ document.addEventListener('DOMContentLoaded', () => {
             id: `${node.getClassName()}_${nextElementId++}` // New unique ID
         });
 
+        // For some shapes like Line, points array might need deep copy or careful handling if complex
+        if (node.getClassName() === 'Line') {
+            clonedNode.points([...node.points()]); // Copy points array
+        }
         // If it's a text node, ensure its width/height are also cloned for layout
         if (clonedNode.getClassName() === 'Text') {
             clonedNode.width(node.width());
@@ -658,6 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteLayer(node) {
+        if (node.getAttr('isLocked')) {
+            alert('Cannot delete locked elements.');
+            return;
+        }
         if (confirm('Are you sure you want to delete this element?')) {
             if (selectedShape === node) {
                 deselectShape(); // Deselect if deleting current
@@ -725,8 +743,8 @@ document.addEventListener('DOMContentLoaded', () => {
     zoomSlider.addEventListener('input', (e) => {
         const scale = parseFloat(e.target.value);
         stage.scale({ x: scale, y: scale });
-        stage.width(width * scale);
-        stage.height(height * scale);
+        // Adjust stage container size to prevent scrollbars from appearing
+        // This is a basic way; for more complex scenarios, you might want to adjust layer/stage position
         stage.container().style.width = `${width * scale}px`;
         stage.container().style.height = `${height * scale}px`;
         zoomValueSpan.textContent = `${Math.round(scale * 100)}%`;
