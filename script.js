@@ -16,12 +16,48 @@ document.addEventListener('DOMContentLoaded', () => {
         rotateEnabled: true,
         // Custom boundBoxFunc to handle text resizing without stretching
         boundBoxFunc: (oldBox, newBox) => {
-            // Limits how small elements can be
-            const MIN_SIZE = 10;
+            const MIN_SIZE = 10; // Minimum dimension for any shape/text
             if (newBox.width < MIN_SIZE || newBox.height < MIN_SIZE) {
                 return oldBox; // Prevent resizing below min size
             }
-            return newBox; // For other shapes and text, return the new box as is
+
+            // Special handling for Text nodes to control font size proportionally
+            if (selectedShape && selectedShape.getClassName() === 'Text') {
+                const textNode = selectedShape;
+
+                // Calculate the scaling factor based on the new width relative to the original width
+                // We need to keep track of the original width to calculate scaling accurately
+                // Let's store originalWidth on the textNode itself upon creation or selection.
+                const originalWidth = textNode.getAttr('initialWidth') || textNode.width();
+                const originalFontSize = textNode.getAttr('initialFontSize') || textNode.fontSize();
+
+                // Calculate new font size based on the width scaling
+                let newFontSize = originalFontSize * (newBox.width / originalWidth);
+
+                // Apply minimum font size to prevent disappearance
+                const MIN_FONT_SIZE = 8; // A reasonable minimum font size
+                if (newFontSize < MIN_FONT_SIZE) {
+                    newFontSize = MIN_FONT_SIZE;
+                    // Adjust newBox width to match the minimum font size if necessary
+                    newBox.width = originalWidth * (MIN_FONT_SIZE / originalFontSize);
+                }
+
+                // Apply new font size and reset scale to 1 to prevent double scaling
+                textNode.fontSize(newFontSize);
+                textNode.width(newBox.width); // Update text node's width
+                textNode.height('auto'); // Let Konva recalculate height
+                textNode.scaleX(1); // Reset scale
+                textNode.scaleY(1); // Reset scale
+
+                return {
+                    width: newBox.width,
+                    height: textNode.height(), // Use the new calculated height for the bounding box
+                    x: newBox.x,
+                    y: newBox.y,
+                    rotation: newBox.rotation
+                };
+            }
+            return newBox; // For other shapes, return the new box as is
         }
     });
     layer.add(transformer);
@@ -65,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const textPropertiesDiv = document.getElementById('textProperties');
     const propTextContent = document.getElementById('propTextContent');
     const propFontFamily = document.getElementById('propFontFamily');
-    // const propFontSize = document.getElementById('propFontSize'); // Removed as per request
-    // const valFontSize = document.getElementById('valFontSize'); // Removed as per request
     const propTextColor = document.getElementById('propTextColor');
     const alignLeftBtn = document.getElementById('alignLeft');
     const alignCenterBtn = document.getElementById('alignCenter');
@@ -125,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
         propFillColorGroup.classList.add('hidden');
         propCornerRadiusGroup.classList.add('hidden');
         textPropertiesDiv.classList.add('hidden');
-        // imagePropertiesDiv.classList.add('hidden'); // Removed as its content moved to propCornerRadiusGroup
         linePropertiesDiv.classList.add('hidden');
 
         // Update common properties
@@ -157,10 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             propFillColor.value = selectedShape.fill();
             propFillColor.disabled = disableControls;
 
-            propCornerRadiusGroup.classList.remove('hidden'); // Re-using for ellipse as well
-            // For Ellipse, cornerRadius applies to its general shape, not strictly "corners"
-            // For a perfect circle, rx and ry should be half of width/height.
-            // Let's use rx as the adjustable property for roundedness.
+            propCornerRadiusGroup.classList.remove('hidden');
             propCornerRadius.value = selectedShape.radiusX(); // Use radiusX for "roundedness"
             valCornerRadius.textContent = Math.round(selectedShape.radiusX());
             propCornerRadius.disabled = disableControls;
@@ -372,6 +402,13 @@ document.addEventListener('DOMContentLoaded', () => {
             shadowOffsetY: 0,
             shadowEnabled: false, // Custom property for shadow toggle
         });
+
+        // For Text nodes, store initial properties for proportional scaling
+        if (shape.getClassName() === 'Text') {
+            shape.setAttr('initialWidth', shape.width());
+            shape.setAttr('initialFontSize', shape.fontSize());
+        }
+
         layer.add(shape);
         selectShape(shape); // Select the newly added shape
     }
@@ -549,7 +586,6 @@ document.addEventListener('DOMContentLoaded', () => {
     propTextContent.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
-            // Konva will automatically adjust height based on `width` and `wrap`
             layer.batchDraw();
             updateLayersPanel();
         }
@@ -558,16 +594,13 @@ document.addEventListener('DOMContentLoaded', () => {
     propFontFamily.addEventListener('change', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fontFamily(e.target.value);
+            // When font family changes, font size might need adjustment to maintain visual size
+            // Re-evaluate initialWidth and initialFontSize
+            selectedShape.setAttr('initialWidth', selectedShape.width());
+            selectedShape.setAttr('initialFontSize', selectedShape.fontSize());
             layer.batchDraw();
         }
     });
-    // propFontSize.addEventListener('input', (e) => { // Removed as per request
-    //     if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
-    //         selectedShape.fontSize(parseFloat(e.target.value));
-    //         valFontSize.textContent = Math.round(selectedShape.fontSize());
-    //         layer.batchDraw();
-    //     }
-    // });
     propTextColor.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fill(e.target.value);
@@ -748,6 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
             clonedNode.height('auto'); // Konva handles height automatically with 'wrap'
             clonedNode.wrap('word'); // Ensure wrap is set for cloned text
             clonedNode.fontSize(node.fontSize()); // Copy original font size
+            // Copy initial width/fontSize for consistent scaling
+            clonedNode.setAttr('initialWidth', node.getAttr('initialWidth') || node.width());
+            clonedNode.setAttr('initialFontSize', node.getAttr('initialFontSize') || node.fontSize());
         }
 
         layer.add(clonedNode);
@@ -816,38 +852,32 @@ document.addEventListener('DOMContentLoaded', () => {
     transformer.on('transformend', () => {
         if (selectedShape) {
             if (selectedShape.getClassName() === 'Text') {
-                // When text is transformed (resized), update its width based on scale
-                // and then reset scale to 1 to prevent font size from visually changing,
-                // relying on width + wrap for resizing.
-                selectedShape.width(selectedShape.width() * selectedShape.scaleX());
-                selectedShape.height('auto'); // Konva will recalculate height based on new width and wrap
-                selectedShape.scaleX(1); // Reset scale to 1 after applying to width
-                selectedShape.scaleY(1); // Reset scale to 1
-                // Font size property is no longer used for dynamic sizing via transformer
-            } else if (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Image') {
-                // Update width/height for other shapes that are being scaled
+                // For text, the font size is updated within boundBoxFunc,
+                // so here we just need to ensure the transformer's nodes are reset
+                // and the panel is updated.
+                // Re-attach transformer to update handles if text dimensions changed significantly
+                transformer.nodes([selectedShape]);
+            } else {
+                // For other shapes, apply the scale to width/height and reset scale to 1
                 selectedShape.width(selectedShape.width() * selectedShape.scaleX());
                 selectedShape.height(selectedShape.height() * selectedShape.scaleY());
                 selectedShape.scaleX(1);
                 selectedShape.scaleY(1);
-            } else if (selectedShape.getClassName() === 'Circle') { // Ellipse
-                 // Update radiusX/Y based on scale
-                selectedShape.radiusX(selectedShape.radiusX() * selectedShape.scaleX());
-                selectedShape.radiusY(selectedShape.radiusY() * selectedShape.scaleY());
-                selectedShape.scaleX(1);
-                selectedShape.scaleY(1);
-            } else if (selectedShape.getClassName() === 'Line') {
-                // For lines, transformend updates points automatically,
-                // but we might want to update the length property in UI.
-                const points = selectedShape.points();
-                const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
-                propLineLength.value = Math.round(currentLength);
-                valLineLength.textContent = Math.round(currentLength);
+                if (selectedShape.getClassName() === 'Circle') { // Ellipse
+                    selectedShape.radiusX(selectedShape.radiusX()); // Radius already updated in boundBoxFunc if any custom logic was there
+                    selectedShape.radiusY(selectedShape.shapeType === 'Circle' ? selectedShape.radiusX() : selectedShape.radiusY()); // If it was a circle, keep proportional
+                } else if (selectedShape.getClassName() === 'Line') {
+                    const points = selectedShape.points();
+                    const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
+                    propLineLength.value = Math.round(currentLength);
+                    valLineLength.textContent = Math.round(currentLength);
+                }
             }
             updatePropertiesPanel(); // Refresh properties after transform
         }
         layer.batchDraw();
     });
+
 
     // Update properties panel when shape is dragged
     layer.on('dragend', () => {
