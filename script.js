@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadWebPBtn = document.getElementById('downloadWebPBtn');
     const zoomSlider = document.getElementById('zoomSlider');
     const zoomValueSpan = document.getElementById('zoomValue');
-    const quickTextArea = document.getElementById('quickTextArea'); // This is your scratchpad
+    const quickTextArea = document.getElementById('quickTextArea');
 
     // Properties Panel
     const noElementSelectedMsg = document.getElementById('noElementSelected');
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Text Specific
     const textPropertiesDiv = document.getElementById('textProperties');
-    const propTextContent = document.getElementById('propTextContent'); // Input for selected Konva Text
+    const propTextContent = document.getElementById('propTextContent');
     const propFontFamily = document.getElementById('propFontFamily');
     const propFontSize = document.getElementById('propFontSize');
     const valFontSize = document.getElementById('valFontSize');
@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const propLineThickness = document.getElementById('propLineThickness');
     const valLineThickness = document.getElementById('valLineThickness');
     const propLineColor = document.getElementById('propLineColor');
+
 
     // Shadow Properties
     const shadowEnable = document.getElementById('shadowEnable');
@@ -91,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedShape) {
             noElementSelectedMsg.classList.remove('hidden');
             elementPropertiesDiv.classList.add('hidden');
-            // quickTextArea will NOT be cleared or linked here, it's independent
             return;
         }
 
@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
             propTextColor.value = selectedShape.fill(); // Text color is fill for Konva.Text
             updateFontStyles(selectedShape.fontStyle());
             updateTextAlign(selectedShape.align());
-            // QUICK TEXT AREA IS NOT UPDATED HERE, as per user request.
 
             propTextContent.disabled = disableControls;
             propFontFamily.disabled = disableControls;
@@ -145,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleBoldBtn.disabled = disableControls;
             toggleItalicBtn.disabled = disableControls;
 
-
         } else if (selectedShape.getClassName() === 'Image') {
             imagePropertiesDiv.classList.remove('hidden');
             propCornerRadius.value = selectedShape.cornerRadius();
@@ -153,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             propCornerRadius.disabled = disableControls;
         } else if (selectedShape.getClassName() === 'Line') {
             linePropertiesDiv.classList.remove('hidden');
+            // Points are [x1, y1, x2, y2]. For horizontal, y1==y2
             const points = selectedShape.points();
             const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
             propLineLength.value = Math.round(currentLength);
@@ -167,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Shadow properties
-        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {};
+        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {}; // Get current shadow or empty
         shadowEnable.checked = selectedShape.getAttr('shadowEnabled') || false;
         shadowColor.value = shadow.shadowColor || '#000000';
         shadowBlur.value = shadow.shadowBlur || 0;
@@ -178,27 +177,26 @@ document.addEventListener('DOMContentLoaded', () => {
         valShadowOffsetY.textContent = Math.round(shadow.shadowOffsetY || 0);
 
         shadowEnable.disabled = disableControls;
-        const shadowControlsDisabled = disableControls || !shadowEnable.checked;
-        shadowColor.disabled = shadowControlsDisabled;
-        shadowBlur.disabled = shadowControlsDisabled;
-        shadowOffsetX.disabled = shadowControlsDisabled;
-        shadowOffsetY.disabled = shadowControlsDisabled;
-
+        shadowColor.disabled = disableControls || !shadowEnable.checked;
+        shadowBlur.disabled = disableControls || !shadowEnable.checked;
+        shadowOffsetX.disabled = disableControls || !shadowEnable.checked;
+        shadowOffsetY.disabled = disableControls || !shadowEnable.checked;
 
         // Update Lock/Unlock button text
         toggleLockBtn.textContent = isLocked ? 'Unlock Element' : 'Lock Element';
-        toggleLockBtn.disabled = false;
+        toggleLockBtn.disabled = false; // Always allow toggling lock
     }
 
     function updateLayersPanel() {
         layersList.innerHTML = '';
-        const nodes = layer.children.filter(node => node !== tr);
-
+        // Get all children of the layer, excluding the transformer
+        const nodes = layer.getChildren().toArray().filter(node => node !== tr); 
+        // Iterate in reverse order to display top layers at the top of the list
         for (let i = nodes.length - 1; i >= 0; i--) {
             const node = nodes[i];
             const li = document.createElement('li');
             li.dataset.id = node.id();
-            li.dataset.index = node.getZIndex();
+            li.dataset.index = node.getZIndex(); // Store Konva layer Z-index
 
             let icon = '❓';
             let name = 'Unknown';
@@ -210,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name = 'Circle';
             } else if (node.getClassName() === 'Text') {
                 icon = '🅰️';
-                name = node.text().substring(0, 20) + (node.text().length > 20 ? '...' : '') || 'Text';
+                name = node.text().substring(0, 20) || 'Text'; // Show snippet
             } else if (node.getClassName() === 'Image') {
                 icon = '🖼️';
                 name = 'Image';
@@ -219,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name = 'Line';
             }
 
+            // Add locked icon if applicable
             const isLocked = node.getAttr('isLocked') || false;
             const lockIcon = isLocked ? '🔒' : '🔓';
             const lockTitle = isLocked ? 'Locked' : 'Unlocked';
@@ -228,8 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="layer-name">${name}</span>
                 <div class="layer-actions">
                     <button class="layer-lock-btn" title="${lockTitle}">${lockIcon}</button>
-                    <button class="layer-dup-btn" title="Duplicate" ${isLocked ? 'disabled' : ''}>📋</button>
-                    <button class="layer-del-btn" title="Delete" ${isLocked ? 'disabled' : ''}>✖️</button>
+                    <button class="layer-dup-btn" title="Duplicate">📋</button>
+                    <button class="layer-del-btn" title="Delete">✖️</button>
                 </div>
             `;
             if (node === selectedShape) {
@@ -237,27 +236,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             li.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') return;
+                if (e.target.tagName === 'BUTTON') return; // Don't reselect if button clicked
                 selectShape(node);
             });
 
-            li.querySelector('.layer-lock-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleLayerLock(node);
-            });
-            li.querySelector('.layer-dup-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                duplicateLayer(node);
-            });
-            li.querySelector('.layer-del-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteLayer(node);
-            });
+            // Layer specific actions
+            li.querySelector('.layer-lock-btn').addEventListener('click', () => toggleLayerLock(node));
+            li.querySelector('.layer-dup-btn').addEventListener('click', () => duplicateLayer(node));
+            li.querySelector('.layer-del-btn').addEventListener('click', () => deleteLayer(node));
 
             layersList.appendChild(li);
         }
 
+        // Enable/disable layer movement buttons
         if (selectedShape) {
+            // Get the current index relative to other shapes (excluding transformer)
             const shapes = layer.children.filter(node => node !== tr);
             const index = shapes.indexOf(selectedShape);
             moveLayerUpBtn.disabled = index >= shapes.length - 1 || selectedShape.getAttr('isLocked');
@@ -266,21 +259,22 @@ document.addEventListener('DOMContentLoaded', () => {
             moveLayerUpBtn.disabled = true;
             moveLayerDownBtn.disabled = true;
         }
-        layer.batchDraw();
+        layer.batchDraw(); // Redraw Konva layer
     }
 
     function selectShape(shape) {
         if (selectedShape && selectedShape !== shape) {
+            // Deselect previous
             tr.nodes([]);
         }
         selectedShape = shape;
-        if (selectedShape && !selectedShape.getAttr('isLocked')) {
+        if (selectedShape && !selectedShape.getAttr('isLocked')) { // Only attach transformer if not locked
             tr.nodes([selectedShape]);
         } else if (selectedShape && selectedShape.getAttr('isLocked')) {
-            tr.nodes([]);
+            tr.nodes([]); // Ensure no transformer if newly selected locked shape
         }
         updatePropertiesPanel();
-        updateLayersPanel();
+        updateLayersPanel(); // To highlight selected layer
         layer.batchDraw();
     }
 
@@ -293,12 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addShapeToLayer(shape) {
-        shape.id(`${shape.getClassName()}_${nextElementId++}`);
-        shape.setAttr('isLocked', false);
-        shape.setAttr('shadowEnabled', false);
+        shape.id(`${shape.getClassName()}_${nextElementId++}`); // Assign unique ID
+        shape.setAttr('isLocked', false); // Custom property for lock state
+        shape.setAttr('shadowEnabled', false); // Custom property for shadow toggle
         layer.add(shape);
-        selectShape(shape);
-        layer.batchDraw();
+        selectShape(shape); // Select the newly added shape
+        layer.batchDraw(); // Redraw the Konva layer
     }
 
     // --- Event Listeners for Adding Elements ---
@@ -308,13 +302,13 @@ document.addEventListener('DOMContentLoaded', () => {
             y: 50,
             width: 100,
             height: 100,
-            fill: '#FFFFFF',
+            fill: '#FFFFFF', // Default white
             draggable: true,
-            shadowColor: '#000000',
+            shadowColor: '#000000', // Default shadow properties
             shadowBlur: 5,
             shadowOffsetX: 5,
             shadowOffsetY: 5,
-            shadowEnabled: false,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(rect);
     });
@@ -324,13 +318,13 @@ document.addEventListener('DOMContentLoaded', () => {
             x: 150,
             y: 150,
             radius: 50,
-            fill: '#FFFFFF',
+            fill: '#FFFFFF', // Default white
             draggable: true,
-            shadowColor: '#000000',
+            shadowColor: '#000000', // Default shadow properties
             shadowBlur: 5,
             shadowOffsetX: 5,
             shadowOffsetY: 5,
-            shadowEnabled: false,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(circle);
     });
@@ -344,20 +338,19 @@ document.addEventListener('DOMContentLoaded', () => {
             fontFamily: 'Arial',
             fill: '#333333',
             draggable: true,
-            width: 300,
+            width: 300, // For alignment
             align: 'left',
-            fontStyle: 'normal',
-            shadowColor: '#000000',
+            shadowColor: '#000000', // Default shadow properties
             shadowBlur: 5,
             shadowOffsetX: 5,
             shadowOffsetY: 5,
-            shadowEnabled: false,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(textNode);
     });
 
     addImageBtn.addEventListener('click', () => {
-        imageUpload.click();
+        imageUpload.click(); // Trigger hidden file input
     });
 
     imageUpload.addEventListener('change', (e) => {
@@ -378,12 +371,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         width: img.width * scale,
                         height: img.height * scale,
                         draggable: true,
-                        cornerRadius: 0,
-                        shadowColor: '#000000',
+                        cornerRadius: 0, // Default no rounded corners
+                        shadowColor: '#000000', // Default shadow properties
                         shadowBlur: 5,
                         shadowOffsetX: 5,
                         shadowOffsetY: 5,
-                        shadowEnabled: false,
+                        shadowEnabled: false, // Start disabled
                     });
                     addShapeToLayer(konvaImage);
                 };
@@ -395,15 +388,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addLineBtn.addEventListener('click', () => {
         const line = new Konva.Line({
-            points: [50, 200, 250, 200],
-            stroke: '#000000',
+            points: [50, 200, 250, 200], // Horizontal line
+            stroke: '#000000', // Default black line
             strokeWidth: 5,
             draggable: true,
-            shadowColor: '#000000',
+            shadowColor: '#000000', // Default shadow properties
             shadowBlur: 5,
             shadowOffsetX: 5,
             shadowOffsetY: 5,
-            shadowEnabled: false,
+            shadowEnabled: false, // Start disabled
         });
         addShapeToLayer(line);
     });
@@ -419,17 +412,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape[prop](value);
             layer.batchDraw();
+            // Re-render transformer if position/rotation changes (important if changed via input)
             if (prop === 'x' || prop === 'y' || prop === 'rotation') {
                 tr.nodes([selectedShape]);
             }
-            updatePropertiesPanel();
+            updatePropertiesPanel(); // Update panel to reflect changes and values
         }
     }
 
     propX.addEventListener('input', (e) => updateShapeProperty('x', parseFloat(e.target.value)));
     propY.addEventListener('input', (e) => updateShapeProperty('y', parseFloat(e.target.value)));
     propRotation.addEventListener('input', (e) => updateShapeProperty('rotation', parseFloat(e.target.value)));
-
     propFillColor.addEventListener('input', (e) => {
         if (selectedShape && (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle') && !selectedShape.getAttr('isLocked')) {
             selectedShape.fill(e.target.value);
@@ -442,11 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
             layer.batchDraw();
-            updateLayersPanel(); // To update layer name if text content changes
+            updateLayersPanel(); // Update layer name
         }
     });
-    // QUICK TEXT AREA IS NOT LINKED TO SELECTED SHAPE TEXT CONTENT.
-
     propFontFamily.addEventListener('change', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fontFamily(e.target.value);
@@ -537,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Image Properties
     propCornerRadius.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Image' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.cornerRadius(parseFloat(e.target.value));
+            selectedShape.cornerRadius(parseInt(e.target.value));
             valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
             layer.batchDraw();
         }
@@ -550,10 +541,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const startX = currentPoints[0];
             const startY = currentPoints[1];
             const newLength = parseFloat(e.target.value);
+            // Assuming horizontal line for simplicity
             selectedShape.points([startX, startY, startX + newLength, startY]);
             valLineLength.textContent = Math.round(newLength);
             layer.batchDraw();
-            tr.nodes([selectedShape]);
         }
     });
 
@@ -586,8 +577,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 shadowBlur: parseFloat(shadowBlur.value),
                 shadowOffsetX: parseFloat(shadowOffsetX.value),
                 shadowOffsetY: parseFloat(shadowOffsetY.value),
+                // shadowForStrokeEnabled: false // Generally not for stroke unless desired
             });
         } else {
+            // Remove shadow properties visually
             selectedShape.setAttrs({
                 shadowColor: undefined,
                 shadowBlur: 0,
@@ -596,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         layer.batchDraw();
-        updatePropertiesPanel();
+        updatePropertiesPanel(); // To update disabled states
     }
 
     shadowEnable.addEventListener('change', updateShadowProperties);
@@ -614,16 +607,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateShadowProperties();
     });
 
-    // --- Lock/Unlock (Properties Panel Button) ---
+    // --- Lock/Unlock ---
     toggleLockBtn.addEventListener('click', () => {
         if (selectedShape) {
             const isLocked = !selectedShape.getAttr('isLocked');
             selectedShape.setAttr('isLocked', isLocked);
-            selectedShape.draggable(!isLocked);
-            tr.nodes(isLocked ? [] : [selectedShape]);
+            selectedShape.draggable(!isLocked); // Disable Konva dragging for locked elements
+            tr.nodes(isLocked ? [] : [selectedShape]); // Remove transformer if locked
             layer.batchDraw();
             updatePropertiesPanel();
-            updateLayersPanel();
+            updateLayersPanel(); // To update lock icon
         }
     });
 
@@ -632,12 +625,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLocked = !node.getAttr('isLocked');
         node.setAttr('isLocked', isLocked);
         node.draggable(!isLocked);
-        if (selectedShape === node) {
+        if (selectedShape === node) { // If currently selected, update transformer
             tr.nodes(isLocked ? [] : [node]);
         }
         layer.batchDraw();
-        updatePropertiesPanel();
-        updateLayersPanel();
+        updatePropertiesPanel(); // Update properties panel disabled state
+        updateLayersPanel(); // Update lock icon
     }
 
     function duplicateLayer(node) {
@@ -647,33 +640,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const clonedNode = node.clone({
-            x: node.x() + 20,
+            x: node.x() + 20, // Offset new clone slightly
             y: node.y() + 20,
-            id: `${node.getClassName()}_${nextElementId++}`
+            id: `${node.getClassName()}_${nextElementId++}` // New unique ID
         });
 
-        if (node.getClassName() === 'Line') {
-            clonedNode.points([...node.points()]);
-        }
+        // If it's a text node, ensure its width/height are also cloned for layout
         if (clonedNode.getClassName() === 'Text') {
             clonedNode.width(node.width());
             clonedNode.height(node.height());
         }
 
         layer.add(clonedNode);
-        clonedNode.moveToTop();
+        clonedNode.moveToTop(); // Bring cloned layer to top
         selectShape(clonedNode);
         layer.batchDraw();
     }
 
     function deleteLayer(node) {
-        if (node.getAttr('isLocked')) {
-            alert('Cannot delete locked elements.');
-            return;
-        }
         if (confirm('Are you sure you want to delete this element?')) {
             if (selectedShape === node) {
-                deselectShape();
+                deselectShape(); // Deselect if deleting current
             }
             node.destroy();
             layer.batchDraw();
@@ -685,10 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             const currentIndex = selectedShape.getZIndex();
             const allShapes = layer.children.filter(node => node !== tr);
-            if (currentIndex < allShapes.length -1) {
+            if (currentIndex < allShapes.length -1) { // Check if not already at top
                 selectedShape.moveUp();
                 layer.batchDraw();
-                updateLayersPanel();
+                updateLayersPanel(); // To reflect new order
             }
         } else if (selectedShape && selectedShape.getAttr('isLocked')) {
             alert('Cannot move locked elements.');
@@ -698,10 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
     moveLayerDownBtn.addEventListener('click', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             const currentIndex = selectedShape.getZIndex();
-            if (currentIndex > 0) {
+            if (currentIndex > 0) { // Check if not already at bottom
                 selectedShape.moveDown();
                 layer.batchDraw();
-                updateLayersPanel();
+                updateLayersPanel(); // To reflect new order
             }
         } else if (selectedShape && selectedShape.getAttr('isLocked')) {
             alert('Cannot move locked elements.');
@@ -711,11 +698,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Canvas Interaction (Selection) ---
     stage.on('click tap', (e) => {
+        // If click on transformer, do nothing
         if (e.target === stage || e.target === layer) {
             deselectShape();
             return;
         }
 
+        // If click on a shape
         const clickedOnTransformer = e.target.getParent() && e.target.getParent().className === 'Transformer';
         if (clickedOnTransformer) {
             return;
@@ -726,12 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Update properties panel when shape is transformed (resized, rotated, moved)
     tr.on('transformend', () => {
-        if (selectedShape && selectedShape.getClassName() === 'Line') {
-             const points = selectedShape.points();
-             const newLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
-             selectedShape.setAttr('length', newLength);
-        }
         updatePropertiesPanel();
         layer.batchDraw();
     });
@@ -740,6 +725,8 @@ document.addEventListener('DOMContentLoaded', () => {
     zoomSlider.addEventListener('input', (e) => {
         const scale = parseFloat(e.target.value);
         stage.scale({ x: scale, y: scale });
+        stage.width(width * scale);
+        stage.height(height * scale);
         stage.container().style.width = `${width * scale}px`;
         stage.container().style.height = `${height * scale}px`;
         zoomValueSpan.textContent = `${Math.round(scale * 100)}%`;
@@ -747,6 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Font Management (Simplified) ---
+    // Add Google Fonts to the font dropdown initially
     propFontFamily.options[propFontFamily.options.length] = new Option('Pacifico (Web)', 'Pacifico');
     propFontFamily.options[propFontFamily.options.length] = new Option('Lobster (Web)', 'Lobster');
     propFontFamily.options[propFontFamily.options.length] = new Option('Dancing Script (Web)', 'Dancing Script');
@@ -760,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function (event) {
-                    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
+                    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_'); // Basic name clean-up
                     const fontFace = new FontFace(fontName, `url(${event.target.result})`);
 
                     fontFace.load().then((loadedFace) => {
@@ -769,6 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         propFontFamily.add(newOption);
                         alert(`Font '${fontName}' loaded successfully!`);
 
+                        // Create a temporary style rule to ensure the font is applied if selected
                         const style = document.createElement('style');
                         style.textContent = `@font-face { font-family: '${fontName}'; src: url(${event.target.result}) format('${file.name.split('.').pop()}'); }`;
                         document.head.appendChild(style);
@@ -785,17 +774,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Download WebP ---
     downloadWebPBtn.addEventListener('click', () => {
+        // Temporarily remove transformer to avoid it being in the image
         tr.nodes([]);
-        layer.batchDraw();
+        layer.batchDraw(); // Redraw without transformer
 
+        // Save current stage scale
         const currentScale = stage.scaleX();
+        // Reset scale to 100% for download
         stage.scale({ x: 1, y: 1 });
         stage.width(width);
         stage.height(height);
 
+        // Get data URL as WebP (Konva uses canvas.toDataURL, browser support varies for WebP)
+        // For actual optimization, a dedicated WebP library would be needed,
+        // or a server-side conversion.
+        // This will likely produce a large WebP file unless browser's native implementation optimizes.
         const dataURL = stage.toDataURL({
             mimeType: 'image/webp',
-            quality: 0.8
+            quality: 0.8 // Adjust quality (0 to 1) for file size, but actual size depends on content
         });
 
         const a = document.createElement('a');
@@ -806,10 +802,11 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
 
+        // Restore original scale and transformer
         stage.scale({ x: currentScale, y: currentScale });
         stage.width(width * currentScale);
         stage.height(height * currentScale);
-        if (selectedShape && !selectedShape.getAttr('isLocked')) {
+        if (selectedShape && !selectedShape.getAttr('isLocked')) { // Re-attach transformer if selected and not locked
             tr.nodes([selectedShape]);
         }
         layer.batchDraw();
@@ -819,5 +816,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Setup ---
     updatePropertiesPanel();
     updateLayersPanel();
-    stage.container().style.backgroundColor = bgColorPicker.value;
+    stage.container().style.backgroundColor = bgColorPicker.value; // Set initial background
 });
