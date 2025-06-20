@@ -34,27 +34,40 @@ body {
     box-shadow: var(--shadow-light);
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-start; /* Aligns content within top-bar to start */
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    gap: 10px;
+}
+
+.header-content { /* New container to hold logo and controls in one line */
+    display: flex;
+    justify-content: space-between; /* Pushes logo left, controls right */
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
     gap: 10px;
 }
 
 .top-bar .header-link { /* Style for the new hyperlink on h1 */
     text-decoration: none;
     color: inherit; /* Inherit color from h1 */
+    display: flex; /* Make it a flex container to align h1 nicely */
+    align-items: center;
+    flex-shrink: 0; /* Prevent it from shrinking */
 }
 
 .top-bar h1 {
     margin: 0;
     color: var(--heading-color);
     font-size: 1.5rem;
+    white-space: nowrap; /* Keep title in one line */
 }
 
 .header-controls {
     display: flex;
-    justify-content: flex-end; /* Push all controls to the right */
-    width: 100%;
+    justify-content: flex-end; /* Push all controls to the right within its container */
+    flex-grow: 1; /* Allow it to take available space */
     align-items: center;
     flex-wrap: wrap;
     gap: 15px; /* Space between tool-buttons and other controls */
@@ -459,6 +472,13 @@ button:disabled, .action-button:disabled {
     .top-bar {
         align-items: center;
         text-align: center;
+    }
+    .header-content {
+        flex-direction: column; /* Stack logo and controls vertically */
+    }
+    .top-bar .header-link {
+        width: 100%; /* Make logo take full width */
+        justify-content: center; /* Center the logo text */
     }
     .top-bar h1 {
         font-size: 1.3rem;
