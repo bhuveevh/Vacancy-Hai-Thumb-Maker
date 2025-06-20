@@ -156,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
             propLineLength.value = Math.round(currentLength);
             valLineLength.textContent = Math.round(currentLength);
             propLineThickness.value = selectedShape.strokeWidth();
-            valLineThickness.textContent = Math.round(selectedShape.strokeWidth());
             propLineColor.value = selectedShape.stroke();
+            valLineThickness.textContent = Math.round(selectedShape.strokeWidth());
 
             propLineLength.disabled = disableControls;
             propLineThickness.disabled = disableControls;
@@ -188,8 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLayersPanel() {
         layersList.innerHTML = '';
-        // Get all children of the layer, excluding the transformer
-        const nodes = layer.getChildren().toArray().filter(node => node !== tr); 
+        // FIX: Konva's layer.getChildren() returns a Konva.Collection, not an array directly in some versions.
+        // Konva's children property is already an array.
+        const nodes = layer.children.filter(node => node !== tr); // Use layer.children directly
+
         // Iterate in reverse order to display top layers at the top of the list
         for (let i = nodes.length - 1; i >= 0; i--) {
             const node = nodes[i];
