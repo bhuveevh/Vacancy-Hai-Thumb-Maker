@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const textNode = new Konva.Text({
             x: 200,
             y: 100,
-            text: 'vacancyHai.online your text!',
+            text: 'Type your text here!',
             fontSize: 40, // Base font size
             fontFamily: 'Arial',
             fill: '#333333',
