@@ -16,22 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
         rotateEnabled: true,
         // Custom boundBoxFunc to handle text resizing without stretching
         boundBoxFunc: (oldBox, newBox) => {
-            if (selectedShape && selectedShape.getClassName() === 'Text') {
-                // When resizing text, only width should change, height should be auto-calculated by Konva's wrap property.
-                // Maintain aspect ratio for font size, but let width be set freely.
-                // newBox.width will be the proposed new width from the transformer.
-                // We'll set the Konva.Text node's width directly and let Konva recalculate height.
-                // Here, we just return the newBox as is, and handle the actual text node
-                // properties in the 'transformend' event.
-                return {
-                    x: newBox.x,
-                    y: newBox.y,
-                    width: newBox.width,
-                    height: newBox.height,
-                    rotation: newBox.rotation,
-                };
+            // Limits how small elements can be
+            const MIN_SIZE = 10;
+            if (newBox.width < MIN_SIZE || newBox.height < MIN_SIZE) {
+                return oldBox; // Prevent resizing below min size
             }
-            return newBox; // For other shapes, use default behavior
+            return newBox; // For other shapes and text, return the new box as is
         }
     });
     layer.add(transformer);
@@ -43,12 +33,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Top Bar (Tools)
     const addRectBtn = document.getElementById('addRectBtn');
-    const addCircleBtn = document.getElementById('addCircleBtn');
+    const addCircleBtn = document.getElementById('addCircleBtn'); // Renamed to addEllipseBtn logically
     const addTextBtn = document.getElementById('addTextBtn');
     const imageUpload = document.getElementById('imageUpload');
     const addImageBtn = document.getElementById('addImageBtn');
     const addLineBtn = document.getElementById('addLineBtn');
     const uploadFontBtn = document.getElementById('uploadFontBtn');
+    const fontUpload = document.getElementById('fontUpload'); // New: for multiple font uploads
 
     // Scratchpad
     const quickTextArea = document.getElementById('quickTextArea');
@@ -65,23 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const propFillColorGroup = document.getElementById('propFillColorGroup');
     const propFillColor = document.getElementById('propFillColor');
 
+    // Rounded Corner Property (for Rect and Image)
+    const propCornerRadiusGroup = document.getElementById('propCornerRadiusGroup');
+    const propCornerRadius = document.getElementById('propCornerRadius');
+    const valCornerRadius = document.getElementById('valCornerRadius');
+
     // Text Specific Properties
     const textPropertiesDiv = document.getElementById('textProperties');
     const propTextContent = document.getElementById('propTextContent');
     const propFontFamily = document.getElementById('propFontFamily');
-    const propFontSize = document.getElementById('propFontSize');
-    const valFontSize = document.getElementById('valFontSize');
+    // const propFontSize = document.getElementById('propFontSize'); // Removed as per request
+    // const valFontSize = document.getElementById('valFontSize'); // Removed as per request
     const propTextColor = document.getElementById('propTextColor');
     const alignLeftBtn = document.getElementById('alignLeft');
     const alignCenterBtn = document.getElementById('alignCenter');
     const alignRightBtn = document.getElementById('alignRight');
     const toggleBoldBtn = document.getElementById('toggleBold');
     const toggleItalicBtn = document.getElementById('toggleItalic');
-
-    // Image Specific Properties
-    const imagePropertiesDiv = document.getElementById('imageProperties');
-    const propCornerRadius = document.getElementById('propCornerRadius');
-    const valCornerRadius = document.getElementById('valCornerRadius');
 
     // Line Specific Properties
     const linePropertiesDiv = document.getElementById('lineProperties');
@@ -132,8 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Reset visibility of all type-specific property sections
         propFillColorGroup.classList.add('hidden');
+        propCornerRadiusGroup.classList.add('hidden');
         textPropertiesDiv.classList.add('hidden');
-        imagePropertiesDiv.classList.add('hidden');
+        // imagePropertiesDiv.classList.add('hidden'); // Removed as its content moved to propCornerRadiusGroup
         linePropertiesDiv.classList.add('hidden');
 
         // Update common properties
@@ -150,23 +142,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update element-specific properties
         const className = selectedShape.getClassName();
-        if (className === 'Rect' || className === 'Circle') {
+        if (className === 'Rect') {
             propFillColorGroup.classList.remove('hidden');
             propFillColor.value = selectedShape.fill();
             propFillColor.disabled = disableControls;
+
+            propCornerRadiusGroup.classList.remove('hidden');
+            propCornerRadius.value = selectedShape.cornerRadius();
+            valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
+            propCornerRadius.disabled = disableControls;
+
+        } else if (className === 'Circle') { // Konva Circle is actually an Ellipse
+            propFillColorGroup.classList.remove('hidden');
+            propFillColor.value = selectedShape.fill();
+            propFillColor.disabled = disableControls;
+
+            propCornerRadiusGroup.classList.remove('hidden'); // Re-using for ellipse as well
+            // For Ellipse, cornerRadius applies to its general shape, not strictly "corners"
+            // For a perfect circle, rx and ry should be half of width/height.
+            // Let's use rx as the adjustable property for roundedness.
+            propCornerRadius.value = selectedShape.radiusX(); // Use radiusX for "roundedness"
+            valCornerRadius.textContent = Math.round(selectedShape.radiusX());
+            propCornerRadius.disabled = disableControls;
+
         } else if (className === 'Text') {
             textPropertiesDiv.classList.remove('hidden');
             propTextContent.value = selectedShape.text();
             propFontFamily.value = selectedShape.fontFamily();
-            propFontSize.value = selectedShape.fontSize();
-            valFontSize.textContent = Math.round(selectedShape.fontSize());
             propTextColor.value = selectedShape.fill(); // Text color is 'fill' for Konva.Text
             updateFontStyles(selectedShape.fontStyle());
             updateTextAlign(selectedShape.align());
 
             propTextContent.disabled = disableControls;
             propFontFamily.disabled = disableControls;
-            propFontSize.disabled = disableControls;
             propTextColor.disabled = disableControls;
             alignLeftBtn.disabled = disableControls;
             alignCenterBtn.disabled = disableControls;
@@ -174,7 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleBoldBtn.disabled = disableControls;
             toggleItalicBtn.disabled = disableControls;
         } else if (className === 'Image') {
-            imagePropertiesDiv.classList.remove('hidden');
+            // Image now uses common corner radius group
+            propCornerRadiusGroup.classList.remove('hidden');
             propCornerRadius.value = selectedShape.cornerRadius();
             valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
             propCornerRadius.disabled = disableControls;
@@ -209,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Disable shadow controls if shadow is not enabled or element is locked
         const shadowControlsDisabled = disableControls || !shadowEnabled;
+        shadowEnable.disabled = disableControls; // Shadow enable/disable checkbox itself can be disabled if locked
         shadowColor.disabled = shadowControlsDisabled;
         shadowBlur.disabled = shadowControlsDisabled;
         shadowOffsetX.disabled = shadowControlsDisabled;
@@ -245,9 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (className === 'Rect') {
                 icon = '⬛';
                 name = 'Rectangle';
-            } else if (className === 'Circle') {
+            } else if (className === 'Circle') { // Konva Circle (Ellipse)
                 icon = '🔵';
-                name = 'Circle';
+                name = 'Ellipse';
             } else if (className === 'Text') {
                 icon = '🅰️';
                 // Show a snippet of the text content, max 20 chars
@@ -263,14 +273,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const isLocked = node.getAttr('isLocked') || false;
             const lockIcon = isLocked ? '🔒' : '🔓';
             const lockTitle = isLocked ? 'Locked' : 'Unlocked';
+            const disableButtons = isLocked ? 'disabled' : ''; // For duplicate and delete
 
             li.innerHTML = `
                 <span class="layer-icon">${icon}</span>
                 <span class="layer-name">${name}</span>
                 <div class="layer-actions">
                     <button class="layer-lock-btn" title="${lockTitle}">${lockIcon}</button>
-                    <button class="layer-dup-btn" title="Duplicate" ${isLocked ? 'disabled' : ''}>📋</button>
-                    <button class="layer-del-btn" title="Delete" ${isLocked ? 'disabled' : ''}>✖️</button>
+                    <button class="layer-dup-btn" title="Duplicate" ${disableButtons}>📋</button>
+                    <button class="layer-del-btn" title="Delete" ${disableButtons}>✖️</button>
                 </div>
             `;
             if (node === selectedShape) {
@@ -325,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedShape = shape;
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             transformer.nodes([selectedShape]);
+            transformer.moveToTop(); // Ensure transformer is always on top
         } else { // If newly selected shape is locked or no shape
             transformer.nodes([]);
         }
@@ -352,7 +364,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Assign unique ID and custom properties
         shape.id(`${shape.getClassName()}_${nextElementId++}`);
         shape.setAttr('isLocked', false);
-        shape.setAttr('shadowEnabled', false); // Custom property for shadow toggle
+        // Ensure all new shapes have these properties for consistent shadow behavior
+        shape.setAttrs({
+            shadowColor: '#000000',
+            shadowBlur: 0,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowEnabled: false, // Custom property for shadow toggle
+        });
         layer.add(shape);
         selectShape(shape); // Select the newly added shape
     }
@@ -390,29 +409,21 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 100,
             fill: '#FFFFFF', // Default white
             draggable: true,
-            shadowColor: '#000000',
-            shadowBlur: 5,
-            shadowOffsetX: 5,
-            shadowOffsetY: 5,
-            shadowEnabled: false,
+            cornerRadius: 0, // Default no rounded corners
         });
         addShapeToLayer(rect);
     });
 
-    addCircleBtn.addEventListener('click', () => {
-        const circle = new Konva.Circle({
+    addCircleBtn.addEventListener('click', () => { // Now adds an Ellipse
+        const ellipse = new Konva.Circle({ // Konva.Circle is actually an ellipse
             x: 150,
             y: 150,
-            radius: 50,
+            radiusX: 50, // Default horizontal radius
+            radiusY: 50, // Default vertical radius
             fill: '#FFFFFF',
             draggable: true,
-            shadowColor: '#000000',
-            shadowBlur: 5,
-            shadowOffsetX: 5,
-            shadowOffsetY: 5,
-            shadowEnabled: false,
         });
-        addShapeToLayer(circle);
+        addShapeToLayer(ellipse);
     });
 
     addTextBtn.addEventListener('click', () => {
@@ -420,19 +431,15 @@ document.addEventListener('DOMContentLoaded', () => {
             x: 200,
             y: 100,
             text: 'Type your text here!',
-            fontSize: 40,
+            fontSize: 40, // Base font size
             fontFamily: 'Arial',
             fill: '#333333',
             draggable: true,
-            width: 300, // For alignment and wrapping
+            width: 300, // Initial width for wrapping
             align: 'left',
             fontStyle: 'normal',
             wrap: 'word', // Enable word wrapping
-            shadowColor: '#000000',
-            shadowBlur: 5,
-            shadowOffsetX: 5,
-            shadowOffsetY: 5,
-            shadowEnabled: false,
+            // Important: text does not have cornerRadius, shadow properties are added by addShapeToLayer
         });
         addShapeToLayer(textNode);
     });
@@ -461,11 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         height: img.height * scale,
                         draggable: true,
                         cornerRadius: 0, // Default no rounded corners
-                        shadowColor: '#000000',
-                        shadowBlur: 5,
-                        shadowOffsetX: 5,
-                        shadowOffsetY: 5,
-                        shadowEnabled: false,
                     });
                     addShapeToLayer(konvaImage);
                 };
@@ -481,20 +483,14 @@ document.addEventListener('DOMContentLoaded', () => {
             stroke: '#000000', // Default black
             strokeWidth: 5,
             draggable: true,
-            shadowColor: '#000000',
-            shadowBlur: 5,
-            shadowOffsetX: 5,
-            shadowOffsetY: 5,
-            shadowEnabled: false,
+            lineCap: 'round', // Makes line ends rounded
+            lineJoin: 'round',
         });
         addShapeToLayer(line);
     });
 
-
     // --- Canvas Background Color ---
     bgColorPicker.addEventListener('input', (e) => {
-        // No direct `stage.container().style.backgroundColor`, but can set Konva layer background if needed
-        // Or keep it as a visual background for the div containing Konva stage
         document.getElementById('konvaContainer').style.backgroundColor = e.target.value;
     });
 
@@ -505,7 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.x(parseFloat(e.target.value));
             valX.textContent = Math.round(selectedShape.x());
-            // No need to reset transformer nodes for simple position change
             layer.batchDraw();
         }
     });
@@ -524,13 +519,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fill Color (for Rect/Circle)
+    // Fill Color (for Rect/Circle/Text)
     propFillColor.addEventListener('input', (e) => {
-        if (selectedShape && (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle') && !selectedShape.getAttr('isLocked')) {
+        if (selectedShape && (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle' || selectedShape.getClassName() === 'Text') && !selectedShape.getAttr('isLocked')) {
             selectedShape.fill(e.target.value);
             layer.batchDraw();
         }
     });
+
+    // Corner Radius (for Rect and Image) and Ellipse Radius
+    propCornerRadius.addEventListener('input', (e) => {
+        if (selectedShape && !selectedShape.getAttr('isLocked')) {
+            const value = parseFloat(e.target.value);
+            valCornerRadius.textContent = Math.round(value);
+
+            if (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Image') {
+                selectedShape.cornerRadius(value);
+            } else if (selectedShape.getClassName() === 'Circle') {
+                // For Ellipse, adjust both radii to maintain circularity or just radiusX
+                selectedShape.radiusX(value);
+                selectedShape.radiusY(value); // Keep it proportional for "roundedness"
+            }
+            layer.batchDraw();
+        }
+    });
+
 
     // Text Specific Properties
     propTextContent.addEventListener('input', (e) => {
@@ -548,13 +561,13 @@ document.addEventListener('DOMContentLoaded', () => {
             layer.batchDraw();
         }
     });
-    propFontSize.addEventListener('input', (e) => {
-        if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.fontSize(parseFloat(e.target.value));
-            valFontSize.textContent = Math.round(selectedShape.fontSize());
-            layer.batchDraw();
-        }
-    });
+    // propFontSize.addEventListener('input', (e) => { // Removed as per request
+    //     if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
+    //         selectedShape.fontSize(parseFloat(e.target.value));
+    //         valFontSize.textContent = Math.round(selectedShape.fontSize());
+    //         layer.batchDraw();
+    //     }
+    // });
     propTextColor.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fill(e.target.value);
@@ -609,15 +622,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Image Specific Properties
-    propCornerRadius.addEventListener('input', (e) => {
-        if (selectedShape && selectedShape.getClassName() === 'Image' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.cornerRadius(parseFloat(e.target.value));
-            valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
-            layer.batchDraw();
-        }
-    });
-
     // Line Specific Properties
     propLineLength.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
@@ -626,10 +630,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const startY = currentPoints[1];
             const newLength = parseFloat(e.target.value);
             // This assumes changing the second point's X to adjust length (horizontal line)
+            // To maintain angle, more complex vector math would be needed.
+            // For now, simple horizontal length change.
             selectedShape.points([startX, startY, startX + newLength, startY]);
             valLineLength.textContent = Math.round(newLength);
             layer.batchDraw();
-            transformer.nodes([selectedShape]);
+            transformer.nodes([selectedShape]); // Re-attach transformer to update handles
         }
     });
     propLineThickness.addEventListener('input', (e) => {
@@ -651,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedShape || selectedShape.getAttr('isLocked')) return;
 
         const enabled = shadowEnable.checked;
-        selectedShape.setAttr('shadowEnabled', enabled);
+        selectedShape.setAttr('shadowEnabled', enabled); // Update custom attribute
 
         if (enabled) {
             selectedShape.setAttrs({
@@ -659,17 +665,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 shadowBlur: parseFloat(shadowBlur.value),
                 shadowOffsetX: parseFloat(shadowOffsetX.value),
                 shadowOffsetY: parseFloat(shadowOffsetY.value),
+                // Konva will automatically apply shadow if these properties are set
             });
         } else {
+            // Remove shadow properties or set to defaults that effectively disable it
             selectedShape.setAttrs({
-                shadowColor: undefined,
+                shadowColor: undefined, // Removing color disables it more surely
                 shadowBlur: 0,
                 shadowOffsetX: 0,
                 shadowOffsetY: 0,
             });
         }
         layer.batchDraw();
-        updatePropertiesPanel();
+        updatePropertiesPanel(); // Re-render panel to disable controls if shadow is off
     }
 
     shadowEnable.addEventListener('change', handleShadowPropertyChange);
@@ -693,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isLocked = !selectedShape.getAttr('isLocked');
             selectedShape.setAttr('isLocked', isLocked);
             selectedShape.draggable(!isLocked);
-            transformer.nodes(isLocked ? [] : [selectedShape]);
+            transformer.nodes(isLocked ? [] : [selectedShape]); // Detach transformer if locked
             layer.batchDraw();
             updatePropertiesPanel();
             updateLayersPanel();
@@ -722,17 +730,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const clonedNode = node.clone({
             x: node.x() + 20,
             y: node.y() + 20,
-            id: `${node.getClassName()}_${nextElementId++}`
+            id: `${node.getClassName()}_${nextElementId++}`,
+            // Ensure shadow properties are copied correctly as attributes
+            shadowEnabled: node.getAttr('shadowEnabled'),
+            shadowColor: node.shadowColor(),
+            shadowBlur: node.shadowBlur(),
+            shadowOffsetX: node.shadowOffsetX(),
+            shadowOffsetY: node.shadowOffsetY(),
         });
 
         if (node.getClassName() === 'Line') {
-            clonedNode.points([...node.points()]);
+            clonedNode.points([...node.points()]); // Deep copy points array
         }
         if (clonedNode.getClassName() === 'Text') {
-            // Important: Cloned text should inherit original width for wrapping
+            // Text nodes need to preserve their width (which transformer uses)
             clonedNode.width(node.width());
             clonedNode.height('auto'); // Konva handles height automatically with 'wrap'
             clonedNode.wrap('word'); // Ensure wrap is set for cloned text
+            clonedNode.fontSize(node.fontSize()); // Copy original font size
         }
 
         layer.add(clonedNode);
@@ -779,16 +794,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Canvas Interaction (Selection & Transformation) ---
     stage.on('click tap', (e) => {
+        // If clicked on stage or layer directly (not a shape), deselect
         if (e.target === stage || e.target === layer) {
             deselectShape();
             return;
         }
 
+        // If clicked on transformer handle, do nothing (transformer handles its own logic)
         const clickedOnTransformer = e.target.getParent() && e.target.getParent().className === 'Transformer';
         if (clickedOnTransformer) {
             return;
         }
 
+        // If a shape is clicked, select it (unless it's already selected)
         if (e.target !== selectedShape) {
             selectShape(e.target);
         }
@@ -798,15 +816,35 @@ document.addEventListener('DOMContentLoaded', () => {
     transformer.on('transformend', () => {
         if (selectedShape) {
             if (selectedShape.getClassName() === 'Text') {
-                // When text is transformed (resized), update its width and keep height auto.
-                // This ensures text wraps within the new width without stretching.
+                // When text is transformed (resized), update its width based on scale
+                // and then reset scale to 1 to prevent font size from visually changing,
+                // relying on width + wrap for resizing.
                 selectedShape.width(selectedShape.width() * selectedShape.scaleX());
                 selectedShape.height('auto'); // Konva will recalculate height based on new width and wrap
                 selectedShape.scaleX(1); // Reset scale to 1 after applying to width
                 selectedShape.scaleY(1); // Reset scale to 1
+                // Font size property is no longer used for dynamic sizing via transformer
+            } else if (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Image') {
+                // Update width/height for other shapes that are being scaled
+                selectedShape.width(selectedShape.width() * selectedShape.scaleX());
+                selectedShape.height(selectedShape.height() * selectedShape.scaleY());
+                selectedShape.scaleX(1);
+                selectedShape.scaleY(1);
+            } else if (selectedShape.getClassName() === 'Circle') { // Ellipse
+                 // Update radiusX/Y based on scale
+                selectedShape.radiusX(selectedShape.radiusX() * selectedShape.scaleX());
+                selectedShape.radiusY(selectedShape.radiusY() * selectedShape.scaleY());
+                selectedShape.scaleX(1);
+                selectedShape.scaleY(1);
+            } else if (selectedShape.getClassName() === 'Line') {
+                // For lines, transformend updates points automatically,
+                // but we might want to update the length property in UI.
+                const points = selectedShape.points();
+                const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
+                propLineLength.value = Math.round(currentLength);
+                valLineLength.textContent = Math.round(currentLength);
             }
-            // Konva's Transformer applies the shadow properties correctly
-            updatePropertiesPanel();
+            updatePropertiesPanel(); // Refresh properties after transform
         }
         layer.batchDraw();
     });
@@ -819,52 +857,109 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- Font Management (Simplified) ---
+    // --- Font Management (Multiple Uploads) ---
+    // Add default web fonts to dropdown
     propFontFamily.options[propFontFamily.options.length] = new Option('Pacifico (Web)', 'Pacifico');
     propFontFamily.options[propFontFamily.options.length] = new Option('Lobster (Web)', 'Lobster');
     propFontFamily.options[propFontFamily.options.length] = new Option('Dancing Script (Web)', 'Dancing Script');
 
     uploadFontBtn.addEventListener('click', () => {
-        const fontFileInput = document.createElement('input');
-        fontFileInput.type = 'file';
-        fontFileInput.accept = '.ttf,.otf,.woff,.woff2';
-        fontFileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
+        fontUpload.click(); // Trigger hidden file input for multiple fonts
+    });
+
+    fontUpload.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        const loadPromises = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9\s]/g, '_').replace(/\s/g, ''); // Clean up name for font-family CSS
+            const format = file.name.split('.').pop().toLowerCase();
+
+            loadPromises.push(new Promise((resolve, reject) => {
                 reader.onload = function (event) {
-                    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
                     const fontFace = new FontFace(fontName, `url(${event.target.result})`);
 
                     fontFace.load().then((loadedFace) => {
                         document.fonts.add(loadedFace);
-                        const newOption = new Option(fontName, fontName);
+                        const newOption = new Option(`${fontName} (Custom)`, fontName);
                         propFontFamily.add(newOption);
-                        alert(`Font '${fontName}' loaded successfully! It is now available in the font dropdown.`);
 
+                        // Add a style tag for the font-face rule to ensure it's loaded consistently
                         const style = document.createElement('style');
-                        style.textContent = `@font-face { font-family: '${fontName}'; src: url(${event.target.result}) format('${file.name.split('.').pop()}'); }`;
+                        // Use appropriate format for src url, although usually not strictly necessary for .ttf/.otf
+                        style.textContent = `@font-face { font-family: '${fontName}'; src: url(${event.target.result}) format('${format}'); }`;
                         document.head.appendChild(style);
 
+                        console.log(`Font '${fontName}' loaded successfully.`);
+                        resolve(fontName);
                     }).catch(error => {
-                        alert(`Error loading font: ${error.message}. Please ensure it's a valid font file.`);
+                        console.error(`Error loading font ${file.name}:`, error);
+                        reject({ name: file.name, error: error });
                     });
                 };
                 reader.readAsDataURL(file);
+            }));
+        }
+
+        try {
+            const loadedFonts = await Promise.allSettled(loadPromises);
+            const successfulLoads = loadedFonts.filter(p => p.status === 'fulfilled').map(p => p.value);
+            const failedLoads = loadedFonts.filter(p => p.status === 'rejected');
+
+            if (successfulLoads.length > 0) {
+                alert(`Successfully loaded ${successfulLoads.length} font(s): ${successfulLoads.join(', ')}`);
             }
-        };
-        fontFileInput.click();
+            if (failedLoads.length > 0) {
+                alert(`Failed to load ${failedLoads.length} font(s). Check console for details.`);
+            }
+        } catch (error) {
+            // This catch block might not be hit if Promise.allSettled is used, but good for general error handling
+            console.error("An unexpected error occurred during font loading:", error);
+            alert("An error occurred during font loading.");
+        }
+        // Clear selected files from input to allow re-selection of same files
+        fontUpload.value = '';
     });
+
 
     // --- Download WebP ---
     downloadWebPBtn.addEventListener('click', () => {
-        transformer.nodes([]);
+        transformer.nodes([]); // Deselect any active shape for clean export
         layer.batchDraw();
+
+        // Get current background color of the konva container
+        const backgroundColor = document.getElementById('konvaContainer').style.backgroundColor || '#F0F0F0';
+
+        // Create a temporary rectangle to fill the background for export if needed
+        let bgRect = null;
+        if (backgroundColor && backgroundColor !== 'transparent' && backgroundColor !== 'rgba(0, 0, 0, 0)') {
+            bgRect = new Konva.Rect({
+                x: 0,
+                y: 0,
+                width: stage.width(),
+                height: stage.height(),
+                fill: backgroundColor,
+                listening: false, // Not interactive
+                isHitEnabled: false, // Not selectable
+            });
+            layer.add(bgRect); // Add to layer
+            bgRect.moveToBottom(); // Send to back
+            layer.batchDraw(); // Redraw with background
+        }
 
         const dataURL = stage.toDataURL({
             mimeType: 'image/webp',
             quality: 0.8
         });
+
+        if (bgRect) {
+            bgRect.destroy(); // Remove temporary background rect
+            layer.batchDraw(); // Redraw without background
+        }
+
 
         const a = document.createElement('a');
         const timestamp = new Date().toISOString().replace(/[^0-9]/g, '');
@@ -874,6 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
 
+        // Re-select the shape if one was selected before export
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             transformer.nodes([selectedShape]);
         }
