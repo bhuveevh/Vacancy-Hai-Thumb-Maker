@@ -33,10 +33,11 @@ body {
     padding: 10px 20px;
     box-shadow: var(--shadow-light);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column; /* Stack controls vertically if narrow */
+    align-items: flex-start; /* Align items to the start */
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0; /* Prevents shrinking */
+    flex-shrink: 0;
+    gap: 10px; /* Space between h1, tool buttons, and right controls */
 }
 
 .top-bar h1 {
@@ -47,16 +48,26 @@ body {
 
 .header-controls {
     display: flex;
+    justify-content: space-between; /* Tools on left, other controls on right */
+    width: 100%; /* Take full width of top-bar */
     align-items: center;
-    gap: 20px;
+    flex-wrap: wrap; /* Allow wrapping if space is limited */
+    gap: 15px; /* Space between tool-buttons and right-header-controls */
 }
 
-.header-controls label {
+.right-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.right-header-controls label {
     font-size: 0.9rem;
     font-weight: bold;
 }
 
-.header-controls input[type="color"] {
+.right-header-controls input[type="color"] {
     width: 40px;
     height: 30px;
     border: 1px solid var(--border-color);
@@ -74,6 +85,15 @@ body {
     width: 120px;
 }
 
+/* --- Tool Buttons (moved to header) --- */
+.tool-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0; /* Remove margin as it's in header */
+}
+
+
 /* --- Main Editor Container --- */
 .editor-container {
     display: flex;
@@ -86,7 +106,6 @@ body {
     background-color: var(--panel-bg-color);
     padding: 20px;
     box-shadow: var(--shadow-medium);
-    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -95,12 +114,12 @@ body {
 }
 
 .left-sidebar {
-    width: 250px;
+    width: 300px; /* Properties panel on left */
     border-right: 1px solid var(--border-color);
 }
 
 .right-sidebar {
-    width: 300px;
+    width: 250px; /* Layers panel on right */
     border-left: 1px solid var(--border-color);
 }
 
@@ -113,44 +132,50 @@ body {
     padding-bottom: 10px;
 }
 
-/* --- Tool Buttons --- */
-.tool-buttons {
+/* --- Canvas Wrapper (includes Scratchpad and Konva) --- */
+.canvas-wrapper {
+    flex: 1; /* Takes all available space between sidebars */
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 20px;
+    flex-direction: column; /* Stack scratchpad and canvas vertically */
+    align-items: center; /* Center canvas horizontally */
+    background-color: #f0f0f0; /* Default canvas wrapper background */
+    overflow: auto; /* Enable scrollbars for the canvas area */
+    position: relative;
+    padding: 20px; /* Padding around scratchpad and canvas */
+    box-sizing: border-box; /* Include padding in width */
 }
 
-/* --- Quick Notepad --- */
+/* --- Quick Notepad (moved above canvas) --- */
 .quick-notepad {
-    flex: 1; /* Take remaining space in left sidebar */
-    display: flex;
-    flex-direction: column;
+    width: 100%; /* Take full width of canvas-wrapper padding */
+    max-width: 640px; /* Match canvas width */
+    margin-bottom: 20px; /* Space between scratchpad and canvas */
+    background-color: var(--panel-bg-color);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    box-sizing: border-box;
+}
+
+.quick-notepad h2 {
+    font-size: 1.1rem;
+    color: var(--heading-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
 }
 
 .quick-notepad textarea {
     width: 100%;
-    flex: 1; /* Allows textarea to grow */
-    min-height: 150px; /* Minimum height for textarea */
+    min-height: 120px; /* Smaller min-height than previous, adjustable */
     padding: 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    resize: vertical; /* Allow vertical resizing */
+    resize: vertical;
     font-family: 'Arial', sans-serif;
     font-size: 0.9rem;
-    box-sizing: border-box; /* Include padding in width/height */
-}
-
-/* --- Canvas Area --- */
-.canvas-area {
-    flex: 1; /* Takes all available space between sidebars */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f0f0f0; /* Default canvas background */
-    overflow: auto; /* Enable scrollbars for the canvas if content is larger than viewport */
-    position: relative;
-    user-select: none; /* Prevent text selection on canvas */
+    box-sizing: border-box;
 }
 
 .konva-container {
@@ -325,7 +350,7 @@ button:disabled, .action-button:disabled {
     list-style: none;
     padding: 0;
     margin: 0;
-    max-height: 300px; /* Max height for layers list, enable scroll if needed */
+    max-height: 500px; /* Adjusted max height for layers list, enable scroll if needed */
     overflow-y: auto;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -408,7 +433,7 @@ button:disabled, .action-button:disabled {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
     .editor-container {
         flex-direction: column; /* Stack sidebars on smaller screens */
     }
@@ -423,23 +448,38 @@ button:disabled, .action-button:disabled {
     .right-sidebar {
         border-top: 1px solid var(--border-color);
     }
-    .canvas-area {
-        height: 600px; /* Give more fixed height to canvas on small screens */
+    .canvas-wrapper {
+        height: auto; /* Allow height to adjust */
+        padding: 10px;
+    }
+    .quick-notepad {
+        margin-bottom: 10px;
     }
 }
 
 @media (max-width: 768px) {
     .top-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    .header-controls {
-        flex-wrap: wrap;
-        gap: 10px;
+        align-items: center;
+        text-align: center;
     }
     .top-bar h1 {
         font-size: 1.3rem;
+        width: 100%; /* Take full width */
+    }
+    .header-controls {
+        flex-direction: column; /* Stack header controls */
+        gap: 10px;
+    }
+    .tool-buttons, .right-header-controls {
+        width: 100%;
+        justify-content: center; /* Center buttons */
+    }
+    .tool-buttons button {
+        flex-grow: 1; /* Allow buttons to grow for better spacing */
+    }
+    .right-header-controls {
+        flex-wrap: wrap;
+        gap: 10px;
     }
     .sidebar {
         padding: 15px;
