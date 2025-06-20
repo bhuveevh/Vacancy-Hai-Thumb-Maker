@@ -11,17 +11,31 @@ document.addEventListener('DOMContentLoaded', () => {
     stage.add(layer);
 
     // Transformer for resizing and rotating elements
-    const transformer = new Konva.Transformer();
+    const transformer = new Konva.Transformer({
+        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], // Allow standard resizing
+        rotateEnabled: true,
+        // Konva's default behavior for Text node is to adjust width/height on transform
+        // We will ensure `wrap: 'word'` and `width` are respected.
+        boundBoxFunc: (oldBox, newBox) => {
+            // For Text nodes, only allow scaling X and Y uniformly to avoid stretching
+            if (selectedShape && selectedShape.getClassName() === 'Text') {
+                newBox.width = Math.max(selectedShape.width() * newBox.width / oldBox.width, 10);
+                newBox.height = Math.max(selectedShape.height() * newBox.height / oldBox.height, 10);
+                return newBox;
+            }
+            return newBox;
+        }
+    });
     layer.add(transformer);
 
     // --- UI Element References ---
     // Top Bar
     const bgColorPicker = document.getElementById('bgColorPicker');
     const downloadWebPBtn = document.getElementById('downloadWebPBtn');
-    const zoomSlider = document.getElementById('zoomSlider');
-    const zoomValueSpan = document.getElementById('zoomValue');
+    // const zoomSlider = document.getElementById('zoomSlider'); // REMOVED
+    // const zoomValueSpan = document.getElementById('zoomValue'); // REMOVED
 
-    // Left Sidebar (Tools & Scratchpad)
+    // Top Bar (Tools)
     const addRectBtn = document.getElementById('addRectBtn');
     const addCircleBtn = document.getElementById('addCircleBtn');
     const addTextBtn = document.getElementById('addTextBtn');
@@ -29,9 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const addImageBtn = document.getElementById('addImageBtn');
     const addLineBtn = document.getElementById('addLineBtn');
     const uploadFontBtn = document.getElementById('uploadFontBtn');
-    const quickTextArea = document.getElementById('quickTextArea'); // User's requested scratchpad
 
-    // Right Sidebar (Properties & Layers)
+    // Scratchpad
+    const quickTextArea = document.getElementById('quickTextArea');
+
+    // Left Sidebar (Properties)
     const noElementSelectedMsg = document.getElementById('noElementSelected');
     const elementPropertiesDiv = document.getElementById('elementProperties');
     const propX = document.getElementById('propX');
@@ -40,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const valY = document.getElementById('valY');
     const propRotation = document.getElementById('propRotation');
     const valRotation = document.getElementById('valRotation');
-    const propFillColorGroup = document.getElementById('propFillColorGroup'); // Group for visibility control
+    const propFillColorGroup = document.getElementById('propFillColorGroup');
     const propFillColor = document.getElementById('propFillColor');
 
     // Text Specific Properties
@@ -81,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toggleLockBtn = document.getElementById('toggleLock');
 
-    // Layers Panel
+    // Right Sidebar (Layers)
     const layersList = document.getElementById('layersList');
     const moveLayerUpBtn = document.getElementById('moveLayerUp');
     const moveLayerDownBtn = document.getElementById('moveLayerDown');
@@ -159,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (className === 'Line') {
             linePropertiesDiv.classList.remove('hidden');
             const points = selectedShape.points();
-            // Calculate current length for display in UI
+            // Calculate current length for display in UI (assuming horizontal for prop)
             const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
             propLineLength.value = Math.round(currentLength);
             valLineLength.textContent = Math.round(currentLength);
@@ -405,6 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 300, // For alignment and wrapping
             align: 'left',
             fontStyle: 'normal',
+            wrap: 'word', // Enable word wrapping
             shadowColor: '#000000',
             shadowBlur: 5,
             shadowOffsetX: 5,
@@ -470,7 +487,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Canvas Background Color ---
     bgColorPicker.addEventListener('input', (e) => {
-        stage.container().style.backgroundColor = e.target.value;
+        // No direct `stage.container().style.backgroundColor`, but can set Konva layer background if needed
+        // Or keep it as a visual background for the div containing Konva stage
+        document.getElementById('konvaContainer').style.backgroundColor = e.target.value;
     });
 
     // --- Properties Panel Interactions ---
@@ -480,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.x(parseFloat(e.target.value));
             valX.textContent = Math.round(selectedShape.x());
-            transformer.nodes([selectedShape]); // Re-apply transformer to update its position
+            transformer.nodes([selectedShape]);
             layer.batchDraw();
         }
     });
@@ -488,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.y(parseFloat(e.target.value));
             valY.textContent = Math.round(selectedShape.y());
-            transformer.nodes([selectedShape]); // Re-apply transformer to update its position
+            transformer.nodes([selectedShape]);
             layer.batchDraw();
         }
     });
@@ -496,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.rotation(parseFloat(e.target.value));
             valRotation.textContent = Math.round(selectedShape.rotation());
-            transformer.nodes([selectedShape]); // Re-apply transformer to update its rotation
+            transformer.nodes([selectedShape]);
             layer.batchDraw();
         }
     });
@@ -513,8 +532,9 @@ document.addEventListener('DOMContentLoaded', () => {
     propTextContent.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
+            // Konva will automatically adjust height based on `width` and `wrap`
             layer.batchDraw();
-            updateLayersPanel(); // Update layer name if text content changes
+            updateLayersPanel();
         }
     });
 
@@ -533,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     propTextColor.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.fill(e.target.value); // Text color is 'fill' for Konva.Text
+            selectedShape.fill(e.target.value);
             layer.batchDraw();
         }
     });
@@ -605,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedShape.points([startX, startY, startX + newLength, startY]);
             valLineLength.textContent = Math.round(newLength);
             layer.batchDraw();
-            transformer.nodes([selectedShape]); // Update transformer to reflect new dimensions
+            transformer.nodes([selectedShape]);
         }
     });
     propLineThickness.addEventListener('input', (e) => {
@@ -637,16 +657,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 shadowOffsetY: parseFloat(shadowOffsetY.value),
             });
         } else {
-            // When shadow is disabled, remove the visual effect
             selectedShape.setAttrs({
-                shadowColor: undefined, // Konva will remove shadow if color is undefined
+                shadowColor: undefined,
                 shadowBlur: 0,
                 shadowOffsetX: 0,
                 shadowOffsetY: 0,
             });
         }
         layer.batchDraw();
-        updatePropertiesPanel(); // Re-enable/disable controls
+        updatePropertiesPanel();
     }
 
     shadowEnable.addEventListener('change', handleShadowPropertyChange);
@@ -669,11 +688,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape) {
             const isLocked = !selectedShape.getAttr('isLocked');
             selectedShape.setAttr('isLocked', isLocked);
-            selectedShape.draggable(!isLocked); // Disable Konva dragging for locked elements
-            transformer.nodes(isLocked ? [] : [selectedShape]); // Remove transformer if locked
+            selectedShape.draggable(!isLocked);
+            transformer.nodes(isLocked ? [] : [selectedShape]);
             layer.batchDraw();
             updatePropertiesPanel();
-            updateLayersPanel(); // To update lock icon in layers list
+            updateLayersPanel();
         }
     });
 
@@ -682,12 +701,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLocked = !node.getAttr('isLocked');
         node.setAttr('isLocked', isLocked);
         node.draggable(!isLocked);
-        if (selectedShape === node) { // If currently selected, update transformer
+        if (selectedShape === node) {
             transformer.nodes(isLocked ? [] : [node]);
         }
         layer.batchDraw();
-        updatePropertiesPanel(); // Update properties panel disabled state
-        updateLayersPanel(); // Update lock icon and button states
+        updatePropertiesPanel();
+        updateLayersPanel();
     }
 
     function duplicateLayer(node) {
@@ -697,23 +716,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const clonedNode = node.clone({
-            x: node.x() + 20, // Offset new clone slightly
+            x: node.x() + 20,
             y: node.y() + 20,
-            id: `${node.getClassName()}_${nextElementId++}` // New unique ID
+            id: `${node.getClassName()}_${nextElementId++}`
         });
 
-        // Special handling for specific node types if needed (e.g., deep cloning arrays)
         if (node.getClassName() === 'Line') {
-            clonedNode.points([...node.points()]); // Copy points array
+            clonedNode.points([...node.points()]);
         }
-        // If it's a text node, ensure its width/height are also cloned for layout
         if (clonedNode.getClassName() === 'Text') {
+            // Important: Cloned text should inherit original width for wrapping
             clonedNode.width(node.width());
-            clonedNode.height(node.height());
+            clonedNode.height('auto'); // Konva handles height automatically with 'wrap'
+            clonedNode.wrap('word'); // Ensure wrap is set for cloned text
         }
 
         layer.add(clonedNode);
-        clonedNode.moveToTop(); // Bring cloned layer to top
+        clonedNode.moveToTop();
         selectShape(clonedNode);
         layer.batchDraw();
     }
@@ -725,11 +744,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (confirm('Are you sure you want to delete this element?')) {
             if (selectedShape === node) {
-                deselectShape(); // Deselect if deleting current
+                deselectShape();
             }
-            node.destroy(); // Remove from Konva layer
+            node.destroy();
             layer.batchDraw();
-            updateLayersPanel(); // Update the list
+            updateLayersPanel();
         }
     }
 
@@ -737,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.moveUp();
             layer.batchDraw();
-            updateLayersPanel(); // To reflect new order
+            updateLayersPanel();
         } else if (selectedShape && selectedShape.getAttr('isLocked')) {
             alert('Cannot move locked elements.');
         }
@@ -747,7 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.moveDown();
             layer.batchDraw();
-            updateLayersPanel(); // To reflect new order
+            updateLayersPanel();
         } else if (selectedShape && selectedShape.getAttr('isLocked')) {
             alert('Cannot move locked elements.');
         }
@@ -756,60 +775,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Canvas Interaction (Selection & Transformation) ---
     stage.on('click tap', (e) => {
-        // If click on empty stage or layer, deselect
         if (e.target === stage || e.target === layer) {
             deselectShape();
             return;
         }
 
-        // If clicked on the transformer itself, do nothing, as it's part of the selection mechanism
         const clickedOnTransformer = e.target.getParent() && e.target.getParent().className === 'Transformer';
         if (clickedOnTransformer) {
             return;
         }
 
-        // If clicked on a shape that's not currently selected, select it
         if (e.target !== selectedShape) {
             selectShape(e.target);
         }
-        // If clicked on already selected shape, do nothing
     });
 
     // Update properties panel when shape is transformed (resized, rotated, moved via transformer)
     transformer.on('transformend', () => {
-        // Konva updates node's x, y, width, height, rotation directly on transform
-        // For lines, recalculate length if its points are adjusted by transform
-        if (selectedShape && selectedShape.getClassName() === 'Line') {
-             const points = selectedShape.points();
-             const newLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
-             // You could store this as a custom attribute if you want to persist it
-             // selectedShape.setAttr('currentLength', newLength);
+        if (selectedShape) {
+            if (selectedShape.getClassName() === 'Text') {
+                // When text is transformed (resized), update its width and keep height auto.
+                // This ensures text wraps within the new width without stretching.
+                selectedShape.width(selectedShape.width() * selectedShape.scaleX());
+                selectedShape.height('auto'); // Konva will recalculate height
+                selectedShape.scaleX(1); // Reset scale to 1 after applying to width
+                selectedShape.scaleY(1); // Reset scale to 1
+            }
+            // Konva's Transformer applies the shadow properties correctly
+            updatePropertiesPanel();
         }
-        updatePropertiesPanel(); // Refresh panel to show new values
         layer.batchDraw();
     });
 
     // Update properties panel when shape is dragged
     layer.on('dragend', () => {
         if (selectedShape) {
-            updatePropertiesPanel(); // Refresh panel to show new X, Y
+            updatePropertiesPanel();
         }
     });
 
 
-    // --- Zoom Functionality ---
-    zoomSlider.addEventListener('input', (e) => {
-        const scale = parseFloat(e.target.value);
-        stage.scale({ x: scale, y: scale });
-        // Adjust stage container size to prevent scrollbars from appearing immediately if zoomed in
-        stage.container().style.width = `${CANVAS_WIDTH * scale}px`;
-        stage.container().style.height = `${CANVAS_HEIGHT * scale}px`;
-        zoomValueSpan.textContent = `${Math.round(scale * 100)}%`;
-        layer.batchDraw();
-    });
-
     // --- Font Management (Simplified) ---
-    // Add Google Fonts to the font dropdown initially
     propFontFamily.options[propFontFamily.options.length] = new Option('Pacifico (Web)', 'Pacifico');
     propFontFamily.options[propFontFamily.options.length] = new Option('Lobster (Web)', 'Lobster');
     propFontFamily.options[propFontFamily.options.length] = new Option('Dancing Script (Web)', 'Dancing Script');
@@ -823,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function (event) {
-                    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_'); // Basic name clean-up
+                    const fontName = file.name.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
                     const fontFace = new FontFace(fontName, `url(${event.target.result})`);
 
                     fontFace.load().then((loadedFace) => {
@@ -832,7 +838,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         propFontFamily.add(newOption);
                         alert(`Font '${fontName}' loaded successfully! It is now available in the font dropdown.`);
 
-                        // Create a temporary style rule to ensure the font is applied if selected
                         const style = document.createElement('style');
                         style.textContent = `@font-face { font-family: '${fontName}'; src: url(${event.target.result}) format('${file.name.split('.').pop()}'); }`;
                         document.head.appendChild(style);
@@ -849,27 +854,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Download WebP ---
     downloadWebPBtn.addEventListener('click', () => {
-        // Temporarily remove transformer to avoid it being in the image
         transformer.nodes([]);
         layer.batchDraw();
 
-        // Save current stage scale and dimensions
-        const currentScale = stage.scaleX();
-        const originalWidth = stage.width();
-        const originalHeight = stage.height();
-
-        // Reset scale to 100% for download to get original size rendering
-        stage.scale({ x: 1, y: 1 });
-        stage.width(CANVAS_WIDTH);
-        stage.height(CANVAS_HEIGHT);
-
-        // Get data URL as WebP
         const dataURL = stage.toDataURL({
             mimeType: 'image/webp',
-            quality: 0.8 // Adjust quality (0 to 1) for file size
+            quality: 0.8
         });
 
-        // Create a temporary link and trigger download
         const a = document.createElement('a');
         const timestamp = new Date().toISOString().replace(/[^0-9]/g, '');
         a.href = dataURL;
@@ -878,19 +870,36 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
 
-        // Restore original scale and transformer
-        stage.scale({ x: currentScale, y: currentScale });
-        stage.width(originalWidth);
-        stage.height(originalHeight);
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             transformer.nodes([selectedShape]);
         }
         layer.batchDraw();
     });
 
+    // --- Default Branding Text ---
+    function addBrandingText() {
+        const brandingText = new Konva.Text({
+            x: 2, // 2px from left edge
+            y: CANVAS_HEIGHT - 2 - 20, // 2px from bottom edge (considering text height)
+            text: 'VACANCYHAI.ONLINE',
+            fontSize: 16,
+            fontFamily: 'Arial',
+            fill: '#999999', // A subtle gray color
+            draggable: false, // Not draggable
+            isLocked: true, // Custom property to lock it
+            listening: false, // Cannot be selected or interacted with
+            shadowEnabled: false, // No shadow by default
+        });
+        // Adjust Y based on actual text height after creation, if needed
+        brandingText.y(CANVAS_HEIGHT - 2 - brandingText.height());
+        layer.add(brandingText);
+        layer.batchDraw();
+    }
+
 
     // --- Initial Setup on Load ---
-    updatePropertiesPanel(); // Initialize properties panel state
-    updateLayersPanel(); // Initialize layers panel state
-    stage.container().style.backgroundColor = bgColorPicker.value; // Set initial canvas background
+    updatePropertiesPanel();
+    updateLayersPanel();
+    document.getElementById('konvaContainer').style.backgroundColor = bgColorPicker.value;
+    addBrandingText(); // Add the branding text on load
 });
