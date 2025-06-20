@@ -14,16 +14,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const transformer = new Konva.Transformer({
         enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], // Allow standard resizing
         rotateEnabled: true,
-        // Konva's default behavior for Text node is to adjust width/height on transform
-        // We will ensure `wrap: 'word'` and `width` are respected.
+        // Custom boundBoxFunc to handle text resizing without stretching
         boundBoxFunc: (oldBox, newBox) => {
-            // For Text nodes, only allow scaling X and Y uniformly to avoid stretching
             if (selectedShape && selectedShape.getClassName() === 'Text') {
-                newBox.width = Math.max(selectedShape.width() * newBox.width / oldBox.width, 10);
-                newBox.height = Math.max(selectedShape.height() * newBox.height / oldBox.height, 10);
-                return newBox;
+                // When resizing text, only width should change, height should be auto-calculated by Konva's wrap property.
+                // Maintain aspect ratio for font size, but let width be set freely.
+                // newBox.width will be the proposed new width from the transformer.
+                // We'll set the Konva.Text node's width directly and let Konva recalculate height.
+                // Here, we just return the newBox as is, and handle the actual text node
+                // properties in the 'transformend' event.
+                return {
+                    x: newBox.x,
+                    y: newBox.y,
+                    width: newBox.width,
+                    height: newBox.height,
+                    rotation: newBox.rotation,
+                };
             }
-            return newBox;
+            return newBox; // For other shapes, use default behavior
         }
     });
     layer.add(transformer);
@@ -32,8 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Top Bar
     const bgColorPicker = document.getElementById('bgColorPicker');
     const downloadWebPBtn = document.getElementById('downloadWebPBtn');
-    // const zoomSlider = document.getElementById('zoomSlider'); // REMOVED
-    // const zoomValueSpan = document.getElementById('zoomValue'); // REMOVED
 
     // Top Bar (Tools)
     const addRectBtn = document.getElementById('addRectBtn');
@@ -499,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.x(parseFloat(e.target.value));
             valX.textContent = Math.round(selectedShape.x());
-            transformer.nodes([selectedShape]);
+            // No need to reset transformer nodes for simple position change
             layer.batchDraw();
         }
     });
@@ -507,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.y(parseFloat(e.target.value));
             valY.textContent = Math.round(selectedShape.y());
-            transformer.nodes([selectedShape]);
             layer.batchDraw();
         }
     });
@@ -515,7 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             selectedShape.rotation(parseFloat(e.target.value));
             valRotation.textContent = Math.round(selectedShape.rotation());
-            transformer.nodes([selectedShape]);
             layer.batchDraw();
         }
     });
@@ -797,7 +801,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // When text is transformed (resized), update its width and keep height auto.
                 // This ensures text wraps within the new width without stretching.
                 selectedShape.width(selectedShape.width() * selectedShape.scaleX());
-                selectedShape.height('auto'); // Konva will recalculate height
+                selectedShape.height('auto'); // Konva will recalculate height based on new width and wrap
                 selectedShape.scaleX(1); // Reset scale to 1 after applying to width
                 selectedShape.scaleY(1); // Reset scale to 1
             }
@@ -880,7 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addBrandingText() {
         const brandingText = new Konva.Text({
             x: 2, // 2px from left edge
-            y: CANVAS_HEIGHT - 2 - 20, // 2px from bottom edge (considering text height)
+            y: CANVAS_HEIGHT - 2 - 20, // Initial Y, will be adjusted after creation based on actual height
             text: 'VACANCYHAI.ONLINE',
             fontSize: 16,
             fontFamily: 'Arial',
