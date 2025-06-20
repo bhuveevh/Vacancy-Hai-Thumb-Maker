@@ -40,6 +40,11 @@ body {
     gap: 10px;
 }
 
+.top-bar .header-link { /* Style for the new hyperlink on h1 */
+    text-decoration: none;
+    color: inherit; /* Inherit color from h1 */
+}
+
 .top-bar h1 {
     margin: 0;
     color: var(--heading-color);
@@ -48,43 +53,44 @@ body {
 
 .header-controls {
     display: flex;
-    justify-content: space-between; /* Push left and tool controls apart */
+    justify-content: flex-end; /* Push all controls to the right */
     width: 100%;
     align-items: center;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 15px; /* Space between tool-buttons and other controls */
 }
 
-.left-header-controls { /* New container for canvas background & download */
+/* --- Tool Buttons (now includes canvas controls) --- */
+.tool-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+    justify-content: flex-end; /* Align buttons to the right within their container */
+    flex-grow: 1; /* Allow it to take available space */
+    align-items: center; /* Align items vertically in center */
+}
+
+.canvas-controls { /* New container for canvas background & download */
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 10px; /* Smaller gap for these closely related controls */
     flex-wrap: wrap;
 }
 
-.left-header-controls label {
+.canvas-controls label {
     font-size: 0.9rem;
     font-weight: bold;
+    white-space: nowrap; /* Prevent label from wrapping */
 }
 
-.left-header-controls input[type="color"] {
+.canvas-controls input[type="color"] {
     width: 40px;
     height: 30px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;
 }
-
-/* --- Tool Buttons (now in header, right-aligned) --- */
-.tool-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 0;
-    justify-content: flex-end; /* Align buttons to the right */
-    flex-grow: 1; /* Allow it to take available space */
-}
-
 
 /* --- Main Editor Container --- */
 .editor-container {
@@ -462,14 +468,16 @@ button:disabled, .action-button:disabled {
         flex-direction: column;
         gap: 10px;
     }
-    .left-header-controls, .tool-buttons {
+    .tool-buttons {
         width: 100%;
         justify-content: center;
     }
     .tool-buttons button {
         flex-grow: 1;
     }
-    .left-header-controls {
+    .canvas-controls {
+        width: 100%;
+        justify-content: center;
         flex-wrap: wrap;
         gap: 10px;
     }
