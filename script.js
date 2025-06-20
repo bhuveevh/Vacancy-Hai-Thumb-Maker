@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadWebPBtn = document.getElementById('downloadWebPBtn');
     const zoomSlider = document.getElementById('zoomSlider');
     const zoomValueSpan = document.getElementById('zoomValue');
-    const quickTextArea = document.getElementById('quickTextArea');
+    const quickTextArea = document.getElementById('quickTextArea'); // This is your scratchpad
 
     // Properties Panel
     const noElementSelectedMsg = document.getElementById('noElementSelected');
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Text Specific
     const textPropertiesDiv = document.getElementById('textProperties');
-    const propTextContent = document.getElementById('propTextContent');
+    const propTextContent = document.getElementById('propTextContent'); // Input for selected Konva Text
     const propFontFamily = document.getElementById('propFontFamily');
     const propFontSize = document.getElementById('propFontSize');
     const valFontSize = document.getElementById('valFontSize');
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedShape) {
             noElementSelectedMsg.classList.remove('hidden');
             elementPropertiesDiv.classList.add('hidden');
-            quickTextArea.value = ''; // Clear scratchpad
+            // quickTextArea will NOT be cleared or linked here, it's independent
             return;
         }
 
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         textPropertiesDiv.classList.add('hidden');
         imagePropertiesDiv.classList.add('hidden');
         linePropertiesDiv.classList.add('hidden');
-        quickTextArea.value = ''; // Clear scratchpad by default
+
 
         if (selectedShape.getClassName() === 'Rect' || selectedShape.getClassName() === 'Circle') {
             propFillColor.parentElement.style.display = 'block';
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             propTextColor.value = selectedShape.fill(); // Text color is fill for Konva.Text
             updateFontStyles(selectedShape.fontStyle());
             updateTextAlign(selectedShape.align());
-            quickTextArea.value = selectedShape.text(); // Sync scratchpad
+            // QUICK TEXT AREA IS NOT UPDATED HERE, as per user request.
 
             propTextContent.disabled = disableControls;
             propFontFamily.disabled = disableControls;
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alignRightBtn.disabled = disableControls;
             toggleBoldBtn.disabled = disableControls;
             toggleItalicBtn.disabled = disableControls;
-            quickTextArea.disabled = disableControls; // Disable scratchpad if locked
+
 
         } else if (selectedShape.getClassName() === 'Image') {
             imagePropertiesDiv.classList.remove('hidden');
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Shadow properties
-        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {}; // Get current shadow or empty
+        const shadow = selectedShape.getAttrs().shadowEnabled ? selectedShape.getAttrs() : {};
         shadowEnable.checked = selectedShape.getAttr('shadowEnabled') || false;
         shadowColor.value = shadow.shadowColor || '#000000';
         shadowBlur.value = shadow.shadowBlur || 0;
@@ -178,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         valShadowOffsetY.textContent = Math.round(shadow.shadowOffsetY || 0);
 
         shadowEnable.disabled = disableControls;
-        // Disable shadow controls if shadow is not enabled or element is locked
         const shadowControlsDisabled = disableControls || !shadowEnable.checked;
         shadowColor.disabled = shadowControlsDisabled;
         shadowBlur.disabled = shadowControlsDisabled;
@@ -188,12 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update Lock/Unlock button text
         toggleLockBtn.textContent = isLocked ? 'Unlock Element' : 'Lock Element';
-        toggleLockBtn.disabled = false; // Always allow toggling lock
+        toggleLockBtn.disabled = false;
     }
 
     function updateLayersPanel() {
         layersList.innerHTML = '';
-        const nodes = layer.children.filter(node => node !== tr); // Use layer.children directly
+        const nodes = layer.children.filter(node => node !== tr);
 
         for (let i = nodes.length - 1; i >= 0; i--) {
             const node = nodes[i];
@@ -211,7 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 name = 'Circle';
             } else if (node.getClassName() === 'Text') {
                 icon = '🅰️';
-                // Show a snippet of the text content
                 name = node.text().substring(0, 20) + (node.text().length > 20 ? '...' : '') || 'Text';
             } else if (node.getClassName() === 'Image') {
                 icon = '🖼️';
@@ -239,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             li.addEventListener('click', (e) => {
-                // If a button inside the list item was clicked, prevent selecting the shape itself
                 if (e.target.tagName === 'BUTTON') return;
                 selectShape(node);
             });
@@ -260,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
             layersList.appendChild(li);
         }
 
-        // Enable/disable layer movement buttons
         if (selectedShape) {
             const shapes = layer.children.filter(node => node !== tr);
             const index = shapes.indexOf(selectedShape);
@@ -350,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             draggable: true,
             width: 300,
             align: 'left',
-            fontStyle: 'normal', // Ensure default font style
+            fontStyle: 'normal',
             shadowColor: '#000000',
             shadowBlur: 5,
             shadowOffsetX: 5,
@@ -446,20 +442,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
             layer.batchDraw();
-            updateLayersPanel();
-            quickTextArea.value = e.target.value; // Sync with scratchpad
+            updateLayersPanel(); // To update layer name if text content changes
         }
     });
-    // Sync quickTextArea with selected text element
-    quickTextArea.addEventListener('input', (e) => {
-        if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.text(e.target.value);
-            layer.batchDraw();
-            updateLayersPanel(); // Update layer name
-            propTextContent.value = e.target.value; // Sync prop panel text content
-        }
-    });
-
+    // QUICK TEXT AREA IS NOT LINKED TO SELECTED SHAPE TEXT CONTENT.
 
     propFontFamily.addEventListener('change', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
@@ -476,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     propTextColor.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.fill(e.target.value); // For text, fill is the text color
+            selectedShape.fill(e.target.value);
             layer.batchDraw();
         }
     });
@@ -551,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Image Properties
     propCornerRadius.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Image' && !selectedShape.getAttr('isLocked')) {
-            selectedShape.cornerRadius(parseFloat(e.target.value)); // Use parseFloat for consistency
+            selectedShape.cornerRadius(parseFloat(e.target.value));
             valCornerRadius.textContent = Math.round(selectedShape.cornerRadius());
             layer.batchDraw();
         }
@@ -561,15 +547,13 @@ document.addEventListener('DOMContentLoaded', () => {
     propLineLength.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Line' && !selectedShape.getAttr('isLocked')) {
             const currentPoints = selectedShape.points();
-            // This logic assumes horizontal line, for general lines, length changes via transform
-            // For simple line length, assuming first point is fixed and second point x changes
             const startX = currentPoints[0];
             const startY = currentPoints[1];
             const newLength = parseFloat(e.target.value);
             selectedShape.points([startX, startY, startX + newLength, startY]);
             valLineLength.textContent = Math.round(newLength);
             layer.batchDraw();
-            tr.nodes([selectedShape]); // Update transformer to reflect new dimensions
+            tr.nodes([selectedShape]);
         }
     });
 
@@ -604,7 +588,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 shadowOffsetY: parseFloat(shadowOffsetY.value),
             });
         } else {
-            // When shadow is disabled, remove the visual effect by setting properties to undefined/0
             selectedShape.setAttrs({
                 shadowColor: undefined,
                 shadowBlur: 0,
@@ -613,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         layer.batchDraw();
-        updatePropertiesPanel(); // To update disabled states of shadow controls
+        updatePropertiesPanel();
     }
 
     shadowEnable.addEventListener('change', updateShadowProperties);
@@ -744,24 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     tr.on('transformend', () => {
-        // When a shape is resized or moved via transformer, update its properties
-        // For text, adjust width if scaled
-        if (selectedShape && selectedShape.getClassName() === 'Text') {
-            // Konva Text's width is used for text wrapping/alignment.
-            // When scaled, the Konva.Text node's width/height properties don't automatically update to reflect the visual size.
-            // We need to re-evaluate its width based on the transformed scale.
-            // However, simply setting width/height here might interfere with manual width input.
-            // A more robust solution for text might involve checking if `wrap` is enabled.
-            // For now, if scaling, the visual size changes but its `width` property (for alignment) might not.
-            // Let's ensure if it was manually set, it stays. If scaled by TR, it should use that scale.
-            // The transformer applies scale to the node, so its `width()` and `height()` will reflect the scaled size.
-            // So, just calling updatePropertiesPanel() should be enough.
-        } else if (selectedShape && selectedShape.getClassName() === 'Line') {
-             // If line is transformed, its points are adjusted by Konva.
-             // Recalculate length based on new points to update propLineLength.
+        if (selectedShape && selectedShape.getClassName() === 'Line') {
              const points = selectedShape.points();
              const newLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
-             selectedShape.setAttr('length', newLength); // Store custom length
+             selectedShape.setAttr('length', newLength);
         }
         updatePropertiesPanel();
         layer.batchDraw();
