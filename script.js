@@ -16,48 +16,49 @@ document.addEventListener('DOMContentLoaded', () => {
         rotateEnabled: true,
         // Custom boundBoxFunc to handle text resizing without stretching
         boundBoxFunc: (oldBox, newBox) => {
-            const MIN_SIZE = 10; // Minimum dimension for any shape/text
+            const MIN_SIZE = 10;
             if (newBox.width < MIN_SIZE || newBox.height < MIN_SIZE) {
-                return oldBox; // Prevent resizing below min size
+                return oldBox;
             }
 
-            // Special handling for Text nodes to control font size proportionally
             if (selectedShape && selectedShape.getClassName() === 'Text') {
                 const textNode = selectedShape;
 
-                // Calculate the scaling factor based on the new width relative to the original width
-                // We need to keep track of the original width to calculate scaling accurately
-                // Let's store originalWidth on the textNode itself upon creation or selection.
                 const originalWidth = textNode.getAttr('initialWidth') || textNode.width();
+                const originalHeight = textNode.getAttr('initialHeight') || textNode.height();
                 const originalFontSize = textNode.getAttr('initialFontSize') || textNode.fontSize();
 
-                // Calculate new font size based on the width scaling
-                let newFontSize = originalFontSize * (newBox.width / originalWidth);
+                const scaleW = newBox.width / originalWidth;
+                const scaleH = newBox.height / originalHeight;
+                const scale = Math.min(scaleW, scaleH);
 
-                // Apply minimum font size to prevent disappearance
-                const MIN_FONT_SIZE = 8; // A reasonable minimum font size
-                if (newFontSize < MIN_FONT_SIZE) {
-                    newFontSize = MIN_FONT_SIZE;
-                    // Adjust newBox width to match the minimum font size if necessary
-                    newBox.width = originalWidth * (MIN_FONT_SIZE / originalFontSize);
-                }
+                let newFontSize = originalFontSize * scale;
 
-                // Apply new font size and reset scale to 1 to prevent double scaling
+                const MIN_FONT_SIZE = 8;
+                const MAX_FONT_SIZE = 120;
+
+                newFontSize = Math.max(MIN_FONT_SIZE, Math.min(newFontSize, MAX_FONT_SIZE));
+
                 textNode.fontSize(newFontSize);
-                textNode.width(newBox.width); // Update text node's width
-                textNode.height('auto'); // Let Konva recalculate height
-                textNode.scaleX(1); // Reset scale
-                textNode.scaleY(1); // Reset scale
+                textNode.width(newBox.width);
+                textNode.height('auto');
+                textNode.scaleX(1);
+                textNode.scaleY(1);
+
+                textNode.setAttr('initialWidth', textNode.width());
+                textNode.setAttr('initialHeight', textNode.height());
+                textNode.setAttr('initialFontSize', newFontSize);
 
                 return {
-                    width: newBox.width,
-                    height: textNode.height(), // Use the new calculated height for the bounding box
+                    width: textNode.width(),
+                    height: textNode.height(),
                     x: newBox.x,
                     y: newBox.y,
                     rotation: newBox.rotation
                 };
             }
-            return newBox; // For other shapes, return the new box as is
+
+            return newBox;
         }
     });
     layer.add(transformer);
@@ -407,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (shape.getClassName() === 'Text') {
             shape.setAttr('initialWidth', shape.width());
             shape.setAttr('initialFontSize', shape.fontSize());
+        shape.setAttr('initialHeight', shape.height());
         }
 
         layer.add(shape);
