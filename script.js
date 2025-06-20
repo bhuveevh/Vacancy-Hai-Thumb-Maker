@@ -25,31 +25,44 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedShape && selectedShape.getClassName() === 'Text') {
                 const textNode = selectedShape;
 
-                // Calculate the scaling factor based on the new width relative to the original width
-                const originalWidth = textNode.getAttr('initialWidth') || textNode.width();
-                const originalFontSize = textNode.getAttr('initialFontSize') || textNode.fontSize();
+                // We need to determine the new font size based on the new width,
+                // while ensuring the text itself scales proportionally.
+                // The key is to map the visual width of the text to the transformer's width.
 
-                // Calculate new font size based on the width scaling
-                let newFontSize = originalFontSize * (newBox.width / originalWidth);
+                const currentTextWidth = textNode._getTextWidth(); // Get actual rendered text width
+                const currentFontSize = textNode.fontSize();
+
+                // Calculate the new font size based on the ratio of new transformer width to current text width
+                // We're essentially trying to make the transformer's newBox.width reflect the new visual text width
+                let newFontSize = currentFontSize * (newBox.width / currentTextWidth);
 
                 // Apply minimum font size to prevent disappearance
                 const MIN_FONT_SIZE = 8; // A reasonable minimum font size
                 if (newFontSize < MIN_FONT_SIZE) {
                     newFontSize = MIN_FONT_SIZE;
-                    // Adjust newBox width to match the minimum font size if necessary
-                    newBox.width = originalWidth * (MIN_FONT_SIZE / originalFontSize);
+                    // If font size hits minimum, adjust the newBox.width to match the visual width at min font size
+                    // This prevents the transformer handles from being too far out.
+                    // We need to temporarily set the font size to calculate the corresponding width.
+                    const tempText = textNode.clone({ fontSize: MIN_FONT_SIZE });
+                    newBox.width = tempText._getTextWidth();
+                    tempText.destroy(); // Clean up temporary node
                 }
 
-                // Apply new font size and reset scale to 1 to prevent double scaling
+                // Apply the new font size
                 textNode.fontSize(newFontSize);
-                textNode.width(newBox.width); // Update text node's width
-                textNode.height('auto'); // Let Konva recalculate height
-                textNode.scaleX(1); // Reset scale
-                textNode.scaleY(1); // Reset scale
+                // Set the text node's width to its calculated content width
+                // This makes the internal Konva text width match the visual width.
+                textNode.width(textNode._getTextWidth());
+                textNode.height('auto'); // Let Konva recalculate height based on new font size and width
 
+                // Reset scale to 1 to prevent double scaling from transformer
+                textNode.scaleX(1);
+                textNode.scaleY(1);
+
+                // Return the new bounding box for the transformer based on the text node's updated dimensions
                 return {
-                    width: newBox.width,
-                    height: textNode.height(), // Use the new calculated height for the bounding box
+                    width: textNode.width(), // The actual width after font size adjustment
+                    height: textNode.height(),
                     x: newBox.x,
                     y: newBox.y,
                     rotation: newBox.rotation
@@ -365,6 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
             transformer.nodes([selectedShape]);
             transformer.moveToTop(); // Ensure transformer is always on top
+            // IMPORTANT: For text, update the transformer's width to match the *actual* text width
+            // This is crucial after selection if its width property was not accurately reflecting visual width
+            if (selectedShape.getClassName() === 'Text') {
+                selectedShape.width(selectedShape._getTextWidth());
+                selectedShape.height('auto'); // Ensure height is recalculated for rap
+            }
         } else { // If newly selected shape is locked or no shape
             transformer.nodes([]);
         }
@@ -401,17 +420,15 @@ document.addEventListener('DOMContentLoaded', () => {
             shadowEnabled: false, // Custom property for shadow toggle
         });
 
-        // For Text nodes, store initial properties for proportional scaling
-        if (shape.getClassName() === 'Text') {
-            // Set initialWidth and initialFontSize based on the text's calculated width and font size
-            // This needs to happen after the text is rendered or its dimensions are available
-            // For a new text node, we'll set it here with a sensible default width
-            // And then ensure it recalculates its width when its content changes.
-            shape.setAttr('initialWidth', shape.width()); // This will be the initial 'width' given below
-            shape.setAttr('initialFontSize', shape.fontSize());
-        }
-
         layer.add(shape);
+        // Special handling after adding to layer to get accurate dimensions for Text
+        if (shape.getClassName() === 'Text') {
+            // After adding to layer, Konva calculates its intrinsic size.
+            // Set its width property to its actual rendered width,
+            // which will then be used by the transformer.
+            shape.width(shape._getTextWidth());
+            shape.height('auto'); // Let Konva auto-calculate height
+        }
         selectShape(shape); // Select the newly added shape
     }
 
@@ -470,18 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const initialFontSize = 40;
         const initialFontFamily = 'Arial';
 
-        const tempTextNode = new Konva.Text({ // Create a temporary node to measure text
-            text: initialText,
-            fontSize: initialFontSize,
-            fontFamily: initialFontFamily,
-        });
-        // Konva must be drawn to get text width, but we can try to estimate
-        // A more robust solution might involve adding to layer, measuring, then removing,
-        // or using a hidden canvas context.
-        // For simplicity, let's use a slightly more controlled initial width based on content.
-        let initialWidth = tempTextNode.width(); // Get calculated width
-        if (initialWidth < 50) initialWidth = 50; // Ensure a minimum sensible width
-
         const textNode = new Konva.Text({
             x: 200,
             y: 100,
@@ -490,17 +495,16 @@ document.addEventListener('DOMContentLoaded', () => {
             fontFamily: initialFontFamily,
             fill: '#333333',
             draggable: true,
-            width: initialWidth, // Set initial width based on content
+            // Do NOT set a fixed 'width' here initially. Konva will calculate it.
+            // We'll adjust it in addShapeToLayer after it's added.
             align: 'left',
             fontStyle: 'normal',
             wrap: 'word', // Enable word wrapping
         });
 
-        // Store initial properties for proportional scaling AFTER node is set up
-        textNode.setAttr('initialWidth', initialWidth);
-        textNode.setAttr('initialFontSize', initialFontSize);
-
         addShapeToLayer(textNode);
+        // After adding, selectShape will call textNode.width(textNode._getTextWidth())
+        // to set the precise initial width for the transformer.
     });
 
     addImageBtn.addEventListener('click', () => {
@@ -608,22 +612,25 @@ document.addEventListener('DOMContentLoaded', () => {
     propTextContent.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
-            // Recalculate initialWidth and initialFontSize when text content changes
-            // to ensure transformer correctly scales from new content width
-            selectedShape.setAttr('initialWidth', selectedShape.width());
-            selectedShape.setAttr('initialFontSize', selectedShape.fontSize());
+            // After changing text, update its width to match content width for transformer
+            selectedShape.width(selectedShape._getTextWidth());
+            selectedShape.height('auto');
             layer.batchDraw();
             updateLayersPanel();
+            // Re-select to update transformer handles immediately if needed
+            selectShape(selectedShape);
         }
     });
 
     propFontFamily.addEventListener('change', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fontFamily(e.target.value);
-            // When font family changes, re-evaluate initialWidth and initialFontSize
-            selectedShape.setAttr('initialWidth', selectedShape.width());
-            selectedShape.setAttr('initialFontSize', selectedShape.fontSize());
+            // After changing font, update its width to match content width for transformer
+            selectedShape.width(selectedShape._getTextWidth());
+            selectedShape.height('auto');
             layer.batchDraw();
+            // Re-select to update transformer handles immediately if needed
+            selectShape(selectedShape);
         }
     });
     propTextColor.addEventListener('input', (e) => {
@@ -635,6 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
     alignLeftBtn.addEventListener('click', () => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.align('left');
+            // Alignment change might affect text dimensions if multi-line and wrap.
+            // Ensure width is still based on content if not using width for wrapping.
+            // If `wrap` is 'none', then `_getTextWidth` is sufficient. If 'word', then `width` matters.
+            // For now, keep it simple.
             layer.batchDraw();
             updateTextAlign('left');
         }
@@ -664,11 +675,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentStyle = (currentStyle + ' bold').trim();
             }
             selectedShape.fontStyle(currentStyle);
-            // Re-evaluate initialWidth/FontSize as style can affect dimensions
-            selectedShape.setAttr('initialWidth', selectedShape.width());
-            selectedShape.setAttr('initialFontSize', selectedShape.fontSize());
+            // After changing style, update its width to match content width for transformer
+            selectedShape.width(selectedShape._getTextWidth());
+            selectedShape.height('auto');
             layer.batchDraw();
             updateFontStyles(selectedShape.fontStyle());
+            // Re-select to update transformer handles immediately if needed
+            selectShape(selectedShape);
         }
     });
     toggleItalicBtn.addEventListener('click', () => {
@@ -682,11 +695,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentStyle = (currentStyle + ' italic').trim();
             }
             selectedShape.fontStyle(currentStyle);
-            // Re-evaluate initialWidth/FontSize as style can affect dimensions
-            selectedShape.setAttr('initialWidth', selectedShape.width());
-            selectedShape.setAttr('initialFontSize', selectedShape.fontSize());
+            // After changing style, update its width to match content width for transformer
+            selectedShape.width(selectedShape._getTextWidth());
+            selectedShape.height('auto');
             layer.batchDraw();
             updateFontStyles(selectedShape.fontStyle());
+            // Re-select to update transformer handles immediately if needed
+            selectShape(selectedShape);
         }
     });
 
@@ -811,14 +826,12 @@ document.addEventListener('DOMContentLoaded', () => {
             clonedNode.points([...node.points()]); // Deep copy points array
         }
         if (clonedNode.getClassName() === 'Text') {
-            // Text nodes need to preserve their width (which transformer uses)
-            clonedNode.width(node.width());
-            clonedNode.height('auto'); // Konva handles height automatically with 'wrap'
+            // Text nodes need to preserve their width, height, and intrinsic font properties.
+            // The cloned node will initially have the same properties as the original.
+            // We ensure its width is based on its content width right after cloning.
+            clonedNode.width(clonedNode._getTextWidth());
+            clonedNode.height('auto');
             clonedNode.wrap('word'); // Ensure wrap is set for cloned text
-            clonedNode.fontSize(node.fontSize()); // Copy original font size
-            // Copy initial width/fontSize for consistent scaling
-            clonedNode.setAttr('initialWidth', node.getAttr('initialWidth') || node.width());
-            clonedNode.setAttr('initialFontSize', node.getAttr('initialFontSize') || node.fontSize());
         }
 
         layer.add(clonedNode);
@@ -887,9 +900,10 @@ document.addEventListener('DOMContentLoaded', () => {
     transformer.on('transformend', () => {
         if (selectedShape) {
             if (selectedShape.getClassName() === 'Text') {
-                // For text, the font size is updated within boundBoxFunc,
-                // so here we just need to ensure the transformer's nodes are reset
-                // and the panel is updated.
+                // For text, the font size is updated within boundBoxFunc.
+                // We ensure its `width` property (used by transformer) is reset to match its content's current visual width.
+                selectedShape.width(selectedShape._getTextWidth());
+                selectedShape.height('auto'); // Ensure height is correct after font size change
                 // Re-attach transformer to update handles if text dimensions changed significantly
                 transformer.nodes([selectedShape]);
             } else {
@@ -899,8 +913,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedShape.scaleX(1);
                 selectedShape.scaleY(1);
                 if (selectedShape.getClassName() === 'Circle') { // Ellipse
-                    selectedShape.radiusX(selectedShape.radiusX()); // Radius already updated in boundBoxFunc if any custom logic was there
-                    selectedShape.radiusY(selectedShape.shapeType === 'Circle' ? selectedShape.radiusX() : selectedShape.radiusY()); // If it was a circle, keep proportional
+                    selectedShape.radiusX(selectedShape.radiusX());
+                    selectedShape.radiusY(selectedShape.shapeType === 'Circle' ? selectedShape.radiusX() : selectedShape.radiusY());
                 } else if (selectedShape.getClassName() === 'Line') {
                     const points = selectedShape.points();
                     const currentLength = Math.sqrt(Math.pow(points[2] - points[0], 2) + Math.pow(points[3] - points[1], 2));
