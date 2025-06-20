@@ -3,153 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vacancy-Hai Thumb Maker</title>
+    <title>VACANCY HAI ONLINE - Graphics Editor</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/konva@9.3.6/konva.min.js"></script>
-    </head>
+    <script src="https://unpkg.com/konva@9.3.11/konva.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
+</head>
 <body>
-    <div class="app-header">
-        <h1>Vacancy-Hai Thumb Maker</h1>
+    <header class="top-bar">
+        <h1>VACANCY HAI ONLINE Editor</h1>
         <div class="header-controls">
-            <button id="addRectBtn">Add Rectangle</button>
-            <button id="addCircleBtn">Add Circle</button>
-            <button id="addTextBtn">Add Text</button>
-            <input type="file" id="imageUpload" accept="image/*" style="display: none;">
-            <button id="addImageBtn">Add Image</button>
-            <button id="addLineBtn">Add Line</button>
-            <input type="color" id="bgColorPicker" value="#ffffff" title="Canvas Background Color">
-            <button id="uploadFontBtn">Upload Font</button>
+            <label for="bgColorPicker">Canvas Background:</label>
+            <input type="color" id="bgColorPicker" value="#F0F0F0">
             <button id="downloadWebPBtn">Download WebP</button>
-        </div>
-    </div>
-
-    <div class="main-layout">
-        <div class="properties-panel">
-            <h2>Properties</h2>
-            <div id="noElementSelected" class="info-message">Select an element to edit its properties.</div>
-            <div id="elementProperties" class="hidden">
-                <label for="propX">Position X:</label>
-                <input type="range" id="propX" min="0" max="640" value="0">
-                <span id="valX">0</span>px<br>
-
-                <label for="propY">Position Y:</label>
-                <input type="range" id="propY" min="0" max="415" value="0">
-                <span id="valY">0</span>px<br>
-
-                <label for="propRotation">Rotation:</label>
-                <input type="range" id="propRotation" min="0" max="360" value="0">
-                <span id="valRotation">0</span>°<br>
-
-                <label for="propFillColor" class="color-label">Fill Color:</label>
-                <input type="color" id="propFillColor" value="#cccccc"><br>
-
-                <div id="textProperties" class="hidden prop-section">
-                    <h3>Text Properties</h3>
-                    <label for="propTextContent">Content:</label>
-                    <textarea id="propTextContent"></textarea><br>
-
-                    <label for="propFontFamily">Font:</label>
-                    <select id="propFontFamily">
-                        <option value="Arial">Arial</option>
-                        <option value="Verdana">Verdana</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Courier New">Courier New</option>
-                        <option value="Pacifico">Pacifico (Web)</option>
-                        <option value="Lobster">Lobster (Web)</option>
-                        <option value="Dancing Script">Dancing Script (Web)</option>
-                    </select><br>
-
-                    <label for="propFontSize">Size:</label>
-                    <input type="range" id="propFontSize" min="10" max="150" value="24">
-                    <span id="valFontSize">24</span>px<br>
-
-                    <label for="propTextColor" class="color-label">Text Color:</label>
-                    <input type="color" id="propTextColor" value="#000000"><br>
-
-                    <div class="align-buttons">
-                        <button id="alignLeft">Left</button>
-                        <button id="alignCenter">Center</button>
-                        <button id="alignRight">Right</button>
-                    </div><br>
-
-                    <div class="font-style-buttons">
-                        <button id="toggleBold">Bold</button>
-                        <button id="toggleItalic">Italic</button>
-                    </div>
-                </div>
-
-                <div id="imageProperties" class="hidden prop-section">
-                    <h3>Image Properties</h3>
-                    <label for="propCornerRadius">Corner Radius:</label>
-                    <input type="range" id="propCornerRadius" min="0" max="100" value="0">
-                    <span id="valCornerRadius">0</span>px<br>
-                </div>
-
-                <div id="lineProperties" class="hidden prop-section">
-                    <h3>Line Properties</h3>
-                    <label for="propLineLength">Length:</label>
-                    <input type="range" id="propLineLength" min="10" max="500" value="200">
-                    <span id="valLineLength">200</span>px<br>
-
-                    <label for="propLineThickness">Thickness:</label>
-                    <input type="range" id="propLineThickness" min="1" max="20" value="5">
-                    <span id="valLineThickness">5</span>px<br>
-
-                    <label for="propLineColor" class="color-label">Line Color:</label>
-                    <input type="color" id="propLineColor" value="#000000"><br>
-                </div>
-
-                <div class="prop-section">
-                    <h3>Shadow</h3>
-                    <label for="shadowEnable">Enable Shadow:</label>
-                    <input type="checkbox" id="shadowEnable"><br>
-
-                    <label for="shadowColor" class="color-label">Color:</label>
-                    <input type="color" id="shadowColor" value="#000000"><br>
-
-                    <label for="shadowBlur">Blur:</label>
-                    <input type="range" id="shadowBlur" min="0" max="50" value="5">
-                    <span id="valShadowBlur">5</span>px<br>
-
-                    <label for="shadowOffsetX">Offset X:</label>
-                    <input type="range" id="shadowOffsetX" min="-50" max="50" value="5">
-                    <span id="valShadowOffsetX">5</span>px<br>
-
-                    <label for="shadowOffsetY">Offset Y:</label>
-                    <input type="range" id="shadowOffsetY" min="-50" max="50" value="5">
-                    <span id="valShadowOffsetY">5</span>px<br>
-                </div>
-
-                <div class="prop-section">
-                    <button id="toggleLock">Toggle Lock</button>
-                </div>
+            <div class="zoom-control">
+                <label for="zoomSlider">Zoom: <span id="zoomValue">100%</span></label>
+                <input type="range" id="zoomSlider" min="0.1" max="2" step="0.05" value="1">
             </div>
         </div>
+    </header>
 
-        <div class="canvas-area">
-            <div class="scratchpad">
-                <h3>Scratchpad / Quick Text</h3>
-                <textarea id="quickTextArea" placeholder="Draft or paste text here..."></textarea>
+    <main class="editor-container">
+        <aside class="sidebar left-sidebar">
+            <h2>Tools</h2>
+            <div class="tool-buttons">
+                <button id="addRectBtn">Add Rectangle</button>
+                <button id="addCircleBtn">Add Circle</button>
+                <button id="addTextBtn">Add Text</button>
+                <button id="addImageBtn">Add Image</button>
+                <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                <button id="addLineBtn">Add Line</button>
+                <button id="uploadFontBtn">Upload Custom Font</button>
             </div>
+            <div class="quick-notepad">
+                <h2>Scratchpad / Quick Text</h2>
+                <textarea id="quickTextArea" placeholder="Write notes or text snippets here..."></textarea>
+            </div>
+        </aside>
+
+        <section class="canvas-area">
             <div id="konvaContainer" class="konva-container"></div>
-            <div class="zoom-slider">
-                <label for="zoomSlider">Zoom:</label>
-                <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
-                <span id="zoomValue">100%</span>
-            </div>
-        </div>
+        </section>
 
-        <div class="layers-panel">
-            <h2>Layers</h2>
-            <ul id="layersList">
-                </ul>
-            <div class="layer-controls">
-                <button id="moveLayerUp">▲ Up</button>
-                <button id="moveLayerDown">▼ Down</button>
+        <aside class="sidebar right-sidebar">
+            <div class="properties-panel">
+                <h2>Element Properties</h2>
+                <div id="noElementSelected" class="info-message">
+                    No element selected. Click on an element on the canvas to edit its properties.
+                </div>
+                <div id="elementProperties" class="hidden property-section">
+                    <div class="prop-group">
+                        <label for="propX">X:</label>
+                        <input type="range" id="propX" min="-1000" max="1000" step="1" value="0">
+                        <span id="valX">0</span>
+                    </div>
+                    <div class="prop-group">
+                        <label for="propY">Y:</label>
+                        <input type="range" id="propY" min="-1000" max="1000" step="1" value="0">
+                        <span id="valY">0</span>
+                    </div>
+                    <div class="prop-group">
+                        <label for="propRotation">Rotation:</label>
+                        <input type="range" id="propRotation" min="0" max="360" step="1" value="0">
+                        <span id="valRotation">0</span>°
+                    </div>
+
+                    <div class="prop-group" id="propFillColorGroup">
+                        <label for="propFillColor">Fill Color:</label>
+                        <input type="color" id="propFillColor" value="#FFFFFF">
+                    </div>
+
+                    <div id="textProperties" class="hidden">
+                        <div class="prop-group">
+                            <label for="propTextContent">Text Content:</label>
+                            <input type="text" id="propTextContent" placeholder="Enter text">
+                        </div>
+                        <div class="prop-group">
+                            <label for="propFontFamily">Font Family:</label>
+                            <select id="propFontFamily">
+                                <option value="Arial">Arial</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        <div class="prop-group">
+                            <label for="propFontSize">Font Size:</label>
+                            <input type="range" id="propFontSize" min="10" max="200" step="1" value="20">
+                            <span id="valFontSize">20</span>px
+                        </div>
+                        <div class="prop-group">
+                            <label for="propTextColor">Text Color:</label>
+                            <input type="color" id="propTextColor" value="#000000">
+                        </div>
+                        <div class="prop-group text-align-buttons">
+                            <button id="alignLeft" title="Align Left">⬅️</button>
+                            <button id="alignCenter" title="Align Center">↔️</button>
+                            <button id="alignRight" title="Align Right">➡️</button>
+                        </div>
+                        <div class="prop-group font-style-buttons">
+                            <button id="toggleBold" title="Bold"><strong>B</strong></button>
+                            <button id="toggleItalic" title="Italic"><em>I</em></button>
+                        </div>
+                    </div>
+
+                    <div id="imageProperties" class="hidden">
+                        <div class="prop-group">
+                            <label for="propCornerRadius">Corner Radius:</label>
+                            <input type="range" id="propCornerRadius" min="0" max="100" step="1" value="0">
+                            <span id="valCornerRadius">0</span>px
+                        </div>
+                    </div>
+
+                    <div id="lineProperties" class="hidden">
+                        <div class="prop-group">
+                            <label for="propLineLength">Line Length:</label>
+                            <input type="range" id="propLineLength" min="10" max="500" step="1" value="100">
+                            <span id="valLineLength">100</span>px
+                        </div>
+                        <div class="prop-group">
+                            <label for="propLineThickness">Thickness:</label>
+                            <input type="range" id="propLineThickness" min="1" max="20" step="1" value="5">
+                            <span id="valLineThickness">5</span>px
+                        </div>
+                        <div class="prop-group">
+                            <label for="propLineColor">Line Color:</label>
+                            <input type="color" id="propLineColor" value="#000000">
+                        </div>
+                    </div>
+
+                    <div class="shadow-properties property-section">
+                        <h3>Shadow</h3>
+                        <div class="prop-group">
+                            <label for="shadowEnable">Enable Shadow:</label>
+                            <input type="checkbox" id="shadowEnable">
+                        </div>
+                        <div class="prop-group">
+                            <label for="shadowColor">Color:</label>
+                            <input type="color" id="shadowColor" value="#000000">
+                        </div>
+                        <div class="prop-group">
+                            <label for="shadowBlur">Blur:</label>
+                            <input type="range" id="shadowBlur" min="0" max="50" step="1" value="0">
+                            <span id="valShadowBlur">0</span>
+                        </div>
+                        <div class="prop-group">
+                            <label for="shadowOffsetX">Offset X:</label>
+                            <input type="range" id="shadowOffsetX" min="-50" max="50" step="1" value="0">
+                            <span id="valShadowOffsetX">0</span>
+                        </div>
+                        <div class="prop-group">
+                            <label for="shadowOffsetY">Offset Y:</label>
+                            <input type="range" id="shadowOffsetY" min="-50" max="50" step="1" value="0">
+                            <span id="valShadowOffsetY">0</span>
+                        </div>
+                    </div>
+
+                    <button id="toggleLock" class="action-button">Lock Element</button>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <div class="layers-panel property-section">
+                <h2>Layers</h2>
+                <ul id="layersList" class="layers-list">
+                    <li class="info-message">No layers yet. Add elements to see them here.</li>
+                </ul>
+                <div class="layer-actions-bottom">
+                    <button id="moveLayerUp" title="Move Up">⬆️</button>
+                    <button id="moveLayerDown" title="Move Down">⬇️</button>
+                </div>
+            </div>
+        </aside>
+    </main>
 
     <script src="script.js"></script>
 </body>
