@@ -12,13 +12,10 @@
 </head>
 <body>
     <header class="top-bar">
-        <h1>VACANCY HAI ONLINE Editor</h1>
+        <a href="https://vacancyhai.online/" target="_blank" class="header-link">
+            <h1>VACANCY HAI ONLINE Editor</h1>
+        </a>
         <div class="header-controls">
-            <div class="left-header-controls">
-                <label for="bgColorPicker">Canvas Background:</label>
-                <input type="color" id="bgColorPicker" value="#F0F0F0">
-                <button id="downloadWebPBtn">Download WebP</button>
-            </div>
             <div class="tool-buttons">
                 <button id="addRectBtn">Add Rectangle</button>
                 <button id="addCircleBtn">Add Circle</button>
@@ -27,6 +24,11 @@
                 <input type="file" id="imageUpload" accept="image/*" class="hidden">
                 <button id="addLineBtn">Add Line</button>
                 <button id="uploadFontBtn">Upload Custom Font</button>
+                <div class="canvas-controls">
+                    <label for="bgColorPicker">Canvas Background:</label>
+                    <input type="color" id="bgColorPicker" value="#F0F0F0">
+                    <button id="downloadWebPBtn">Download WebP</button>
+                </div>
             </div>
         </div>
     </header>
