@@ -12,33 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Transformer for resizing and rotating elements
     const transformer = new Konva.Transformer({
-        // For text, we will only enable rotation and possibly movement, not resizing.
-        // For other shapes, resizing will still be enabled.
-        // We'll manage transformer.nodes() dynamically.
-        rotateEnabled: true, // Keep rotation for all shapes
-        borderEnabled: true, // Keep border around selected shape
-        anchorSize: 10, // Default anchor size
-        // No enabledAnchors here, we'll set it when attaching to nodes
-        
-        // boundBoxFunc will only apply to shapes that *can* be resized by transformer (non-text)
-        boundBoxFunc: (oldBox, newBox) => {
-            const MIN_SIZE = 10;
-            if (newBox.width < MIN_SIZE || newBox.height < MIN_SIZE) {
-                return oldBox;
-            }
-            // For Text, we are no longer handling resizing via transformer handles,
-            // so this boundBoxFunc logic for Text is effectively bypassed for sizing.
-            // It will still apply to other shapes (Rect, Circle, Image)
-            
-            // If the selected shape is not Text, allow normal resizing logic
-            if (selectedShape && selectedShape.getClassName() !== 'Text') {
-                // Default boundBoxFunc behavior for other shapes
-                return newBox;
-            }
-            // If it's a Text node, we don't want the transformer to directly control its size
-            // We return oldBox to prevent any unwanted size changes by transformer for Text.
-            return oldBox; // Prevent transformer from changing text size
-        }
+        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'], // Allow standard resizing
+        rotateEnabled: true,
+        // Remove boundBoxFunc for text as it will no longer be resized by transformer
+        // boundBoxFunc: (oldBox, newBox) => { /* Removed for Text, only apply for other shapes */ }
     });
     layer.add(transformer);
 
@@ -87,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const alignRightBtn = document.getElementById('alignRight');
     const toggleBoldBtn = document.getElementById('toggleBold');
     const toggleItalicBtn = document.getElementById('toggleItalic');
-    const propFontSize = document.getElementById('propFontSize'); // Font size slider
-    const valFontSize = document.getElementById('valFontSize'); // Font size value display
+    const propFontSize = document.getElementById('propFontSize'); // New: Font size slider
+    const valFontSize = document.getElementById('valFontSize'); // New: Font size value display
 
 
     // Line Specific Properties
@@ -183,15 +160,15 @@ document.addEventListener('DOMContentLoaded', () => {
             propTextContent.value = selectedShape.text();
             propFontFamily.value = selectedShape.fontFamily();
             propTextColor.value = selectedShape.fill(); // Text color is 'fill' for Konva.Text
-            propFontSize.value = selectedShape.fontSize(); // Font size
-            valFontSize.textContent = Math.round(selectedShape.fontSize()); // Font size display
+            propFontSize.value = selectedShape.fontSize(); // New: Font size
+            valFontSize.textContent = Math.round(selectedShape.fontSize()); // New: Font size display
             updateFontStyles(selectedShape.fontStyle());
             updateTextAlign(selectedShape.align());
 
             propTextContent.disabled = disableControls;
             propFontFamily.disabled = disableControls;
             propTextColor.disabled = disableControls;
-            propFontSize.disabled = disableControls;
+            propFontSize.disabled = disableControls; // New: disable font size
             alignLeftBtn.disabled = disableControls;
             alignCenterBtn.disabled = disableControls;
             alignRightBtn.disabled = disableControls;
@@ -341,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Selects a Konva shape, attaches transformer, and updates UI panels.
+     * Selects a Konva shape, attaches transformer (if not text), and updates UI panels.
      * @param {Konva.Shape} shape - The shape to be selected.
      */
     function selectShape(shape) {
@@ -350,21 +327,15 @@ document.addEventListener('DOMContentLoaded', () => {
             transformer.nodes([]);
         }
         selectedShape = shape;
+
         if (selectedShape && !selectedShape.getAttr('isLocked')) {
-            // Dynamically set transformer anchors based on shape type
-            if (selectedShape.getClassName() === 'Text') {
-                // For Text, disable resizing anchors but allow rotation
-                transformer.enabledAnchors([]); // No resizing anchors
-                transformer.rotateEnabled(true);
-                // Ensure text width/height are based on content for transformer border
-                updateTextNodeDimensions(selectedShape, false); // Force update without re-selecting
+            // Attach transformer ONLY if it's NOT a Text node
+            if (selectedShape.getClassName() !== 'Text') {
+                transformer.nodes([selectedShape]);
+                transformer.moveToTop(); // Ensure transformer is always on top
             } else {
-                // For other shapes, enable all resizing anchors and rotation
-                transformer.enabledAnchors(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
-                transformer.rotateEnabled(true);
+                transformer.nodes([]); // Ensure transformer is detached for Text nodes
             }
-            transformer.nodes([selectedShape]);
-            transformer.moveToTop(); // Ensure transformer is always on top
         } else { // If newly selected shape is locked or no shape
             transformer.nodes([]);
         }
@@ -402,9 +373,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         layer.add(shape);
-        // Special handling for Text after adding to layer to get accurate dimensions for display
+        // Special handling after adding to layer to get accurate dimensions for Text
         if (shape.getClassName() === 'Text') {
-            updateTextNodeDimensions(shape, false); // Update dimensions without re-selecting for initial add
+            const PADDING = 2; // Desired padding around text
+            shape.setAttrs({ width: 0, height: 'auto', wrap: 'none' }); // Temporarily disable wrap for accurate intrinsic width
+            layer.batchDraw(); // Force a draw to update internal text metrics
+            shape.width(shape.width() + PADDING); // Set width to content width + padding
+            shape.height(shape.height() + PADDING); // Set height to content height + padding
+            shape.wrap('word'); // Restore default wrap behavior
         }
         selectShape(shape); // Select the newly added shape
     }
@@ -432,46 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fontStyle.includes('bold')) toggleBoldBtn.classList.add('active');
         if (fontStyle.includes('italic')) toggleItalicBtn.classList.add('active');
     }
-
-    /**
-     * Updates the dimensions of a Text node based on its content and font properties,
-     * adding padding, and refreshing the transformer.
-     * @param {Konva.Text} node - The Konva.Text node to update.
-     * @param {boolean} reSelect - Whether to re-select the node after updating dimensions (to refresh transformer).
-     */
-    function updateTextNodeDimensions(node, reSelect = true) {
-        const PADDING = 2; // Desired padding around text content
-        const originalWrap = node.wrap(); // Store original wrap setting
-        
-        // Temporarily set width to 0 and wrap to 'none' to get intrinsic content size
-        // This is crucial for Konva to calculate the exact width/height of the text string
-        // without any wrapping applied.
-        node.setAttrs({ width: 0, height: 'auto', wrap: 'none' }); 
-        layer.batchDraw(); // Force a draw to update internal Konva text metrics based on new properties
-
-        // Get the intrinsic content dimensions (actual pixel width/height of text string)
-        const intrinsicContentWidth = node.width();
-        const intrinsicContentHeight = node.height();
-
-        // Set the node's width and height properties to the intrinsic content size plus padding.
-        // This will be the new bounding box for the transformer.
-        node.width(intrinsicContentWidth + PADDING);
-        node.height(intrinsicContentHeight + PADDING);
-        node.wrap(originalWrap); // Restore original wrap setting after calculating intrinsic width
-
-        layer.batchDraw(); // Redraw with the new dimensions
-        if (reSelect) {
-            selectShape(node); // Re-select to update transformer handles and position
-        } else {
-            // If not re-selecting, at least ensure transformer is updated if attached
-            if (transformer.nodes().includes(node)) {
-                 // Force transformer to re-evaluate its bounding box based on node's new dimensions
-                transformer.forceUpdate(); 
-                layer.batchDraw();
-            }
-        }
-    }
-
 
     // --- Event Listeners for Adding Elements ---
     addRectBtn.addEventListener('click', () => {
@@ -515,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 0, // Konva will calculate intrinsic width
             align: 'left',
             fontStyle: 'normal',
-            wrap: 'word', // Enable word wrapping by default (can be 'none' if you always want single line)
+            wrap: 'word', // Enable word wrapping by default
         });
 
         addShapeToLayer(textNode);
@@ -623,10 +559,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Text Specific Properties
+    function updateTextNodeDimensions(node) {
+        const PADDING = 2; // Desired padding around text
+        const originalWrap = node.wrap();
+        // Temporarily disable wrap and set width to 0 for intrinsic calculation
+        node.setAttrs({ width: 0, height: 'auto', wrap: 'none' });
+        layer.batchDraw(); // Force redraw for Konva to update internal metrics
+
+        node.width(node.width() + PADDING); // Apply padding to intrinsic width
+        node.height(node.height() + PADDING); // Apply padding to intrinsic height
+        node.wrap(originalWrap); // Restore original wrap setting
+        layer.batchDraw(); // Redraw with new dimensions
+        // No need to re-select for transformer for text, as it's not attached
+    }
+
     propTextContent.addEventListener('input', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.text(e.target.value);
-            updateTextNodeDimensions(selectedShape); // Recalculate dimensions for new text
+            updateTextNodeDimensions(selectedShape);
             updateLayersPanel(); // Update layer name in panel
         }
     });
@@ -634,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     propFontFamily.addEventListener('change', (e) => {
         if (selectedShape && selectedShape.getClassName() === 'Text' && !selectedShape.getAttr('isLocked')) {
             selectedShape.fontFamily(e.target.value);
-            updateTextNodeDimensions(selectedShape); // Recalculate dimensions for new font family
+            updateTextNodeDimensions(selectedShape);
         }
     });
 
@@ -643,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSize = parseFloat(e.target.value);
             selectedShape.fontSize(newSize);
             valFontSize.textContent = Math.round(newSize);
-            updateTextNodeDimensions(selectedShape); // Recalculate dimensions for new font size
+            updateTextNodeDimensions(selectedShape);
         }
     });
 
@@ -686,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentStyle = (currentStyle + ' bold').trim();
             }
             selectedShape.fontStyle(currentStyle);
-            updateTextNodeDimensions(selectedShape); // Recalculate dimensions for new font style
+            updateTextNodeDimensions(selectedShape);
             updateFontStyles(selectedShape.fontStyle());
         }
     });
@@ -701,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentStyle = (currentStyle + ' italic').trim();
             }
             selectedShape.fontStyle(currentStyle);
-            updateTextNodeDimensions(selectedShape); // Recalculate dimensions for new font style
+            updateTextNodeDimensions(selectedShape);
             updateFontStyles(selectedShape.fontStyle());
         }
     });
@@ -784,8 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedShape) {
             const isLocked = !selectedShape.getAttr('isLocked');
             selectedShape.setAttr('isLocked', isLocked);
-            selectedShape.draggable(!isLocked); // Toggle draggable property
-            transformer.nodes(isLocked ? [] : [selectedShape]); // Detach transformer if locked
+            selectedShape.draggable(!isLocked);
+            
+            // Detach transformer if locked, or attach if unlocked (only for non-text)
+            if (selectedShape.getClassName() !== 'Text') {
+                transformer.nodes(isLocked ? [] : [selectedShape]);
+            } else {
+                transformer.nodes([]); // Always detached for text
+            }
+            
             layer.batchDraw();
             updatePropertiesPanel();
             updateLayersPanel();
@@ -796,9 +753,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleLayerLock(node) {
         const isLocked = !node.getAttr('isLocked');
         node.setAttr('isLocked', isLocked);
-        node.draggable(!isLocked); // Toggle draggable property
+        node.draggable(!isLocked);
         if (selectedShape === node) {
-            transformer.nodes(isLocked ? [] : [node]);
+             // Detach transformer if locked, or attach if unlocked (only for non-text)
+            if (node.getClassName() !== 'Text') {
+                transformer.nodes(isLocked ? [] : [node]);
+            } else {
+                transformer.nodes([]); // Always detached for text
+            }
         }
         layer.batchDraw();
         updatePropertiesPanel();
@@ -826,14 +788,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (node.getClassName() === 'Line') {
             clonedNode.points([...node.points()]); // Deep copy points array
         }
-        
-        layer.add(clonedNode); // Add before batchDraw for text dimensions
+        // Text specific cloning: Ensure width is reset for recalculation
         if (clonedNode.getClassName() === 'Text') {
-            updateTextNodeDimensions(clonedNode, false); // Update dimensions without re-selecting
+            // Recalculate dimensions for cloned text node immediately
+            const PADDING = 2;
+            clonedNode.setAttrs({ width: 0, height: 'auto', wrap: 'none' });
+            layer.add(clonedNode); // Add before batchDraw to ensure context is available
+            layer.batchDraw(); // Force draw to update internal metrics
+            clonedNode.width(clonedNode.width() + PADDING); // Set width to content width + padding
+            clonedNode.height(clonedNode.height() + PADDING); // Set height to content height + padding
+            clonedNode.wrap('word'); // Restore default wrap behavior
+        } else {
+            layer.add(clonedNode);
         }
 
         clonedNode.moveToTop();
-        selectShape(clonedNode); // This will re-evaluate width/height for transformer
+        selectShape(clonedNode); // This will re-evaluate width/height for transformer if it's not text
         layer.batchDraw();
     }
 
@@ -893,10 +863,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Update properties panel when shape is transformed (rotated or scaled by non-text shapes)
+    // Update properties panel when shape is transformed (resized, rotated, moved via transformer)
     transformer.on('transformend', () => {
         if (selectedShape) {
-            // For non-text shapes, apply scale to dimensions and reset scale
+            // For non-text shapes, apply the scale to width/height and reset scale to 1
             if (selectedShape.getClassName() !== 'Text') {
                 selectedShape.width(selectedShape.width() * selectedShape.scaleX());
                 selectedShape.height(selectedShape.height() * selectedShape.scaleY());
@@ -912,6 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     valLineLength.textContent = Math.round(currentLength);
                 }
             }
+            // For text, transformend won't be called if transformer is not attached.
             updatePropertiesPanel(); // Refresh properties after transform
         }
         layer.batchDraw();
@@ -958,6 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Add a style tag for the font-face rule to ensure it's loaded consistently
                         const style = document.createElement('style');
+                        // Use appropriate format for src url, although usually not strictly necessary for .ttf/.otf
                         style.textContent = `@font-face { font-family: '${fontName}'; src: url(${event.target.result}) format('${format}'); }`;
                         document.head.appendChild(style);
 
@@ -988,6 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(`Failed to load ${failedLoads.length} font(s). Check console for details.`);
             }
         } catch (error) {
+            // This catch block might not be hit if Promise.allSettled is used, but good for general error handling
             console.error("An unexpected error occurred during font loading:", error);
             alert("An error occurred during font loading.");
         }
@@ -1040,9 +1013,9 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         document.body.removeChild(a);
 
-        // Re-select the shape if one was selected before export
-        if (selectedShape && !selectedShape.getAttr('isLocked')) {
-            selectShape(selectedShape); // Use selectShape to correctly re-attach transformer based on type
+        // Re-select the shape if one was selected before export (only for non-text)
+        if (selectedShape && !selectedShape.getAttr('isLocked') && selectedShape.getClassName() !== 'Text') {
+            transformer.nodes([selectedShape]);
         }
         layer.batchDraw();
     });
