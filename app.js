@@ -21,6 +21,99 @@ document.addEventListener('DOMContentLoaded', () => {
         alignButtons: document.querySelectorAll('.align-buttons button'),
     };
 
+    const FONT_STORAGE_KEY = 'vh-thumbnail-maker-fonts';
+
+    // ===================================================
+    // === NEW FONT MANAGEMENT LOGIC STARTS HERE ===
+    // ===================================================
+
+    /**
+     * Loads fonts saved in localStorage when the app starts.
+     */
+    function loadSavedFonts() {
+        const savedFonts = JSON.parse(localStorage.getItem(FONT_STORAGE_KEY) || '[]');
+        if (savedFonts.length === 0) return;
+
+        console.log(`Loading ${savedFonts.length} saved fonts...`);
+        savedFonts.forEach(fontData => {
+            loadAndApplyFont(fontData.name, fontData.dataURL);
+        });
+    }
+
+    /**
+     * Takes font name and dataURL, loads it using FontFace API, and adds to dropdown.
+     * @param {string} name - The name of the font.
+     * @param {string} dataURL - The base64 dataURL of the font file.
+     */
+    function loadAndApplyFont(name, dataURL) {
+        const newFont = new FontFace(name, `url(${dataURL})`);
+        newFont.load().then(loadedFont => {
+            document.fonts.add(loadedFont);
+            // Add to dropdown only if it doesn't already exist
+            if (![...dom.fontFamilySelect.options].some(opt => opt.value === name)) {
+                dom.fontFamilySelect.add(new Option(name, name));
+            }
+        }).catch(err => console.error(`Font loading error for ${name}:`, err));
+    }
+    
+    // --- UPDATED FONT UPLOAD LOGIC ---
+    document.getElementById('font-upload').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (!files.length) return;
+
+        const fontPromises = Array.from(files).map(file => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const fontName = file.name.split('.')[0].replace(/ /g, "_");
+                    resolve({ name: fontName, dataURL: reader.result });
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(fontPromises).then(newFonts => {
+            const savedFonts = JSON.parse(localStorage.getItem(FONT_STORAGE_KEY) || '[]');
+            let newFontsAddedCount = 0;
+
+            newFonts.forEach(newFont => {
+                loadAndApplyFont(newFont.name, newFont.dataURL);
+                if (!savedFonts.some(f => f.name === newFont.name)) {
+                    savedFonts.push(newFont);
+                    newFontsAddedCount++;
+                }
+            });
+
+            if (newFontsAddedCount > 0) {
+                 localStorage.setItem(FONT_STORAGE_KEY, JSON.stringify(savedFonts));
+            }
+           
+            alert(`${newFonts.length} font(s) processed. ${newFontsAddedCount} new font(s) saved successfully!`);
+
+        }).catch(err => {
+            console.error("Error processing fonts:", err);
+            alert("There was an error importing the fonts.");
+        });
+
+        e.target.value = ''; // Reset the input
+    });
+
+    // --- NEW: Clear Saved Fonts Logic ---
+    document.getElementById('clear-fonts').addEventListener('click', () => {
+        if (confirm("Are you sure you want to remove all saved fonts from your browser? This cannot be undone.")) {
+            localStorage.removeItem(FONT_STORAGE_KEY);
+            alert("All saved fonts have been cleared. Please reload the page to see the changes.");
+            // Optionally, reload the page automatically
+            window.location.reload();
+        }
+    });
+
+    // ===================================================
+    // === NEW FONT MANAGEMENT LOGIC ENDS HERE ===
+    // ===================================================
+
+
     // --- Initial State and Functions ---
     function setupInitialCanvas() {
         const whiteSpace = new fabric.Rect({
@@ -57,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="delete" title="Delete"><i class="fas fa-trash-can"></i></button>
                 </div>`;
             
-            // Event Listeners for layer controls
             li.querySelector('.layer-name').addEventListener('click', () => canvas.setActiveObject(obj).renderAll());
             li.querySelector('.delete').addEventListener('click', () => canvas.remove(obj));
             li.querySelector('.lock').addEventListener('click', (e) => {
@@ -84,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.textProps.classList.add('hidden');
         dom.imageProps.classList.add('hidden');
 
-        // Update Shadow Controls
         const shadow = activeObj.shadow;
         dom.shadowEnable.checked = !!shadow;
         dom.shadowControls.classList.toggle('hidden', !shadow);
@@ -95,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.shadowOffsetY.value = shadow.offsetY;
         }
 
-        // Update Type-specific properties
         if (activeObj.type === 'textbox') {
             dom.textProps.classList.remove('hidden');
             document.getElementById('text-color').value = activeObj.fill;
@@ -106,7 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.alignButtons.forEach(btn => btn.classList.toggle('active', btn.id.includes(activeObj.textAlign)));
         } else if (activeObj.type === 'image') {
             dom.imageProps.classList.remove('hidden');
-            // For images, rx is on the clipPath, not the image itself
             const clipPath = activeObj.clipPath;
             document.getElementById('image-corners').value = (clipPath && clipPath.rx) ? clipPath.rx : 0;
         }
@@ -122,9 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Toolbar Actions ---
     document.getElementById('add-text').addEventListener('click', () => {
-        const textbox = new fabric.Textbox('Your Text Here', {
-            left: 50, top: 50, width: 250, fontSize: 40, fill: '#000000', fontFamily: 'Arial',
-        });
+        const textbox = new fabric.Textbox('Your Text Here', { left: 50, top: 50, width: 250, fontSize: 40, fill: '#000000', fontFamily: 'Arial' });
         canvas.add(textbox).setActiveObject(textbox);
     });
     document.getElementById('add-line').addEventListener('click', () => {
@@ -134,30 +221,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('image-upload').addEventListener('change', (e) => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = (f) => fabric.Image.fromURL(f.target.result, (img) => {
-            img.scaleToWidth(200); canvas.add(img).setActiveObject(img);
-        });
-        reader.readAsDataURL(file); e.target.value = '';
-    });
-    document.getElementById('font-upload').addEventListener('change', (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            const fontName = file.name.split('.')[0].replace(/ /g, "_");
-            const newFont = new FontFace(fontName, `url(${f.target.result})`);
-            newFont.load().then(font => {
-                document.fonts.add(font);
-                dom.fontFamilySelect.add(new Option(fontName, fontName));
-                alert(`Font '${fontName}' imported!`);
-            }).catch(err => console.error("Font loading error:", err));
-        };
+        reader.onload = (f) => fabric.Image.fromURL(f.target.result, (img) => { img.scaleToWidth(200); canvas.add(img).setActiveObject(img); });
         reader.readAsDataURL(file); e.target.value = '';
     });
 
     // --- Property Panel Event Listeners ---
     document.getElementById('canvas-bg-color').addEventListener('input', (e) => canvas.setBackgroundColor(e.target.value, canvas.renderAll.bind(canvas)));
-
-    // Text properties
     document.getElementById('text-color').addEventListener('input', (e) => getActive()?.set('fill', e.target.value) && canvas.renderAll());
     document.getElementById('font-size').addEventListener('input', (e) => getActive()?.set('fontSize', parseInt(e.target.value, 10)) && canvas.renderAll());
     dom.fontFamilySelect.addEventListener('change', (e) => getActive()?.set('fontFamily', e.target.value) && canvas.renderAll());
@@ -165,50 +234,32 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('text-italic').addEventListener('click', () => getActive()?.set('fontStyle', getActive().fontStyle === 'italic' ? 'normal' : 'italic') && canvas.renderAll() & updatePropertiesPanel());
     dom.alignButtons.forEach(btn => btn.addEventListener('click', () => getActive()?.set('textAlign', btn.id.split('-')[1]) && canvas.renderAll() & updatePropertiesPanel()));
 
-    // Image properties - Corner Radius (using clipPath)
     document.getElementById('image-corners').addEventListener('input', (e) => {
         const obj = getActive();
         if (obj?.type !== 'image') return;
         const radius = parseInt(e.target.value, 10);
-        if (radius === 0) {
-            obj.clipPath = null; // Remove clipping
-        } else {
-            const clipRect = new fabric.Rect({
-                width: obj.width, height: obj.height,
-                rx: radius, ry: radius,
-                absolutePositioned: true, // Important for clipPath
-            });
-            obj.clipPath = clipRect;
-        }
+        if (radius === 0) { obj.clipPath = null; }
+        else { obj.clipPath = new fabric.Rect({ width: obj.width, height: obj.height, rx: radius / obj.scaleX, ry: radius / obj.scaleY, absolutePositioned: true }); }
         canvas.renderAll();
     });
 
-    // Shadow properties
-    dom.shadowEnable.addEventListener('change', (e) => {
-        if (!e.target.checked) getActive()?.set('shadow', null);
-        else updateShadow();
-        updatePropertiesPanel();
-        canvas.renderAll();
-    });
     function updateShadow() {
         const obj = getActive(); if (!obj) return;
-        const shadow = new fabric.Shadow({
+        obj.set('shadow', new fabric.Shadow({
             color: dom.shadowColor.value,
             blur: parseInt(dom.shadowBlur.value, 10),
             offsetX: parseInt(dom.shadowOffsetX.value, 10),
             offsetY: parseInt(dom.shadowOffsetY.value, 10),
-        });
-        obj.set('shadow', shadow);
+        }));
         canvas.renderAll();
     }
-    ['input', 'change'].forEach(evt => {
-        dom.shadowColor.addEventListener(evt, updateShadow);
-        dom.shadowBlur.addEventListener(evt, updateShadow);
-        dom.shadowOffsetX.addEventListener(evt, updateShadow);
-        dom.shadowOffsetY.addEventListener(evt, updateShadow);
+    dom.shadowEnable.addEventListener('change', (e) => {
+        if (!e.target.checked) getActive()?.set('shadow', null); else updateShadow();
+        updatePropertiesPanel(); canvas.renderAll();
     });
+    [dom.shadowColor, dom.shadowBlur, dom.shadowOffsetX, dom.shadowOffsetY].forEach(el => el.addEventListener('input', updateShadow));
 
-    // --- Eyedropper / Color Picker ---
+    // Eyedropper
     const colorPickerTriggers = document.querySelectorAll('.color-picker-trigger');
     if ('EyeDropper' in window) {
         const eyeDropper = new window.EyeDropper();
@@ -218,18 +269,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const { sRGBHex } = await eyeDropper.open();
                     const colorInput = trigger.previousElementSibling;
                     colorInput.value = sRGBHex;
-                    // Trigger the input event to update the canvas
                     colorInput.dispatchEvent(new Event('input', { bubbles: true }));
-                } catch (e) {
-                    console.log('EyeDropper cancelled.');
-                }
+                } catch (e) { console.log('EyeDropper cancelled.'); }
             });
         });
     } else {
         colorPickerTriggers.forEach(trigger => trigger.classList.add('unsupported'));
     }
 
-    // --- General Controls ---
+    // General Controls
     document.getElementById('zoom-in').addEventListener('click', () => canvas.setZoom(canvas.getZoom() * 1.1));
     document.getElementById('zoom-out').addEventListener('click', () => canvas.setZoom(canvas.getZoom() / 1.1));
     document.getElementById('theme-toggle').addEventListener('click', () => document.body.classList.toggle('dark-theme'));
@@ -238,15 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const filename = `VACANCYHAI_ONLINE_${Date.now()}.${format}`;
         const dataURL = canvas.toDataURL({ format, quality, multiplier: 1 });
         const link = document.createElement('a');
-        link.href = dataURL;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        link.href = dataURL; link.download = filename;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
     document.getElementById('download-jpg').addEventListener('click', () => downloadImage('jpeg', 0.8));
     document.getElementById('download-webp').addEventListener('click', () => downloadImage('webp', 0.8));
     
     // --- Initialize App ---
     setupInitialCanvas();
+    loadSavedFonts(); // Load saved fonts on startup
 });
