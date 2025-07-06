@@ -1,513 +1,131 @@
+/* Basic Setup & Variables */
 :root {
-    --primary-color: #007bff; /* Blue */
-    --secondary-color: #6c757d; /* Gray */
-    --accent-color: #28a745; /* Green */
-    --background-color: #f8f9fa;
-    --panel-bg-color: #ffffff;
-    --border-color: #e9ecef;
-    --text-color: #343a40;
-    --heading-color: #0056b3;
-    --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.1);
-    --shadow-medium: 0 6px 12px rgba(0, 0, 0, 0.15);
-    --button-hover-bg: #0056b3;
-    --button-active-bg: #004085;
-    --selected-item-bg: #e0f2f7; /* Light blue for selected layers */
-    --danger-color: #dc3545;
+    --bg-color: #f0f2f5;
+    --fg-color: #ffffff;
+    --text-color: #1c1e21;
+    --border-color: #dcdfe3;
+    --primary-color: #007bff;
+    --header-height: 60px;
+    --sidebar-width: 280px;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    background-color: var(--background-color);
+    background-color: var(--bg-color);
     color: var(--text-color);
-    overflow: hidden; /* Prevent body scrollbars */
-}
-
-/* --- Top Bar --- */
-.top-bar {
-    background-color: var(--panel-bg-color);
-    padding: 10px 20px;
-    box-shadow: var(--shadow-light);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Aligns content within top-bar to start */
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-    gap: 10px;
-}
-
-.header-content { /* New container to hold logo and controls in one line */
-    display: flex;
-    justify-content: space-between; /* Pushes logo left, controls right */
-    align-items: center;
-    width: 100%;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 10px;
-}
-
-.top-bar .header-link { /* Style for the new hyperlink on h1 */
-    text-decoration: none;
-    color: inherit; /* Inherit color from h1 */
-    display: flex; /* Make it a flex container to align h1 nicely */
-    align-items: center;
-    flex-shrink: 0; /* Prevent it from shrinking */
-}
-
-.top-bar h1 {
-    margin: 0;
-    color: var(--heading-color);
-    font-size: 1.5rem;
-    white-space: nowrap; /* Keep title in one line */
-}
-
-.header-controls {
-    display: flex;
-    justify-content: flex-end; /* Push all controls to the right within its container */
-    flex-grow: 1; /* Allow it to take available space */
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px; /* Space between tool-buttons and other controls */
-}
-
-/* --- Tool Buttons (now includes canvas controls) --- */
-.tool-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 0;
-    justify-content: flex-end; /* Align buttons to the right within their container */
-    flex-grow: 1; /* Allow it to take available space */
-    align-items: center; /* Align items vertically in center */
-}
-
-.canvas-controls { /* New container for canvas background & download */
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Smaller gap for these closely related controls */
-    flex-wrap: wrap;
-}
-
-.canvas-controls label {
-    font-size: 0.9rem;
-    font-weight: bold;
-    white-space: nowrap; /* Prevent label from wrapping */
-}
-
-.canvas-controls input[type="color"] {
-    width: 40px;
-    height: 30px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-/* --- Main Editor Container --- */
-.editor-container {
-    display: flex;
-    flex: 1;
+    transition: background-color 0.3s, color 0.3s;
     overflow: hidden;
 }
 
-/* --- Sidebars (Left & Right) --- */
+body.dark-theme {
+    --bg-color: #18191a;
+    --fg-color: #242526;
+    --text-color: #e4e6eb;
+    --border-color: #3a3b3c;
+    --primary-color: #2d88ff;
+}
+
+i { margin-right: 8px; }
+.hidden { display: none !important; }
+
+/* Main Layout */
+.app-container { display: flex; flex-direction: column; height: 100vh; }
+.app-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; height: var(--header-height); background-color: var(--fg-color);
+    border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    flex-shrink: 0;
+}
+.main-content { display: flex; flex-grow: 1; overflow: hidden; }
+
+/* Header Elements */
+.app-header h1 { font-size: 1.5rem; margin: 0; }
+.tools button, .custom-file-upload {
+    margin: 0 5px; padding: 8px 12px; border: 1px solid var(--border-color);
+    background-color: var(--bg-color); color: var(--text-color); border-radius: 5px;
+    cursor: pointer; font-size: 14px; transition: all 0.2s;
+}
+.tools button:hover, .custom-file-upload:hover {
+    background-color: var(--primary-color); color: white; border-color: var(--primary-color);
+}
+#theme-toggle {
+    padding: 8px 12px; border: none; background: transparent; color: var(--text-color);
+    border-radius: 5px; cursor: pointer; font-size: 1.2rem;
+}
+
+/* Sidebar */
 .sidebar {
-    background-color: var(--panel-bg-color);
-    padding: 20px;
-    box-shadow: var(--shadow-medium);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    overflow-y: auto;
+    width: var(--sidebar-width); background-color: var(--fg-color);
+    padding: 15px; overflow-y: auto;
+    border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);
     flex-shrink: 0;
 }
+.sidebar h3 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 
-.left-sidebar {
-    width: 300px; /* Properties panel on left */
-    border-right: 1px solid var(--border-color);
-}
-
-.right-sidebar {
-    width: 250px; /* Layers panel on right */
-    border-left: 1px solid var(--border-color);
-}
-
-.sidebar h2 {
-    color: var(--heading-color);
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.2rem;
+/* Properties Panel */
+.prop-section {
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
+    margin-bottom: 10px; padding-bottom: 10px;
 }
-
-/* --- Canvas Wrapper (includes Scratchpad and Konva) --- */
-.canvas-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #f0f0f0;
-    overflow: auto;
-    position: relative;
-    padding: 20px;
-    box-sizing: border-box;
+.prop-section summary { font-weight: bold; cursor: pointer; padding: 5px 0; }
+.prop-content { padding: 10px 5px 0 5px; }
+.prop-content label { display: block; margin: 10px 0 5px; font-size: 14px; }
+.prop-content input[type="range"], .prop-content select {
+    width: 100%; box-sizing: border-box; padding: 5px;
 }
-
-/* --- Quick Notepad (above canvas) --- */
-.quick-notepad {
-    width: 100%;
-    max-width: 640px; /* Match canvas width */
-    margin-bottom: 20px;
-    background-color: var(--panel-bg-color);
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: var(--shadow-light);
-    box-sizing: border-box;
+.color-input-wrapper { display: flex; align-items: center; gap: 10px; }
+.color-input-wrapper input[type="color"] {
+    width: 100%; height: 30px; border: 1px solid var(--border-color); padding: 2px;
+    background: transparent;
 }
-
-.quick-notepad h2 {
-    font-size: 1.1rem;
-    color: var(--heading-color);
-    margin-top: 0;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
+.color-picker-trigger {
+    background: none; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px 8px;
+    cursor: pointer; color: var(--text-color);
 }
+.color-picker-trigger.unsupported { display: none; }
+#text-props button, .align-buttons button { font-size: 1rem; padding: 5px 10px; margin-right: 5px; }
+.align-buttons button.active { background-color: var(--primary-color); color: white; }
 
-.quick-notepad textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 10px;
+/* Canvas Area */
+.canvas-main-area {
+    flex-grow: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 20px; background-color: var(--bg-color);
+}
+.note-box-container { width: 100%; max-width: 640px; margin-bottom: 10px; }
+.note-box {
+    width: 100%; padding: 8px; border: 1px solid var(--border-color);
+    border-radius: 4px; background-color: var(--fg-color); color: var(--text-color);
+}
+#canvas-wrapper {
+    box-shadow: 0 0 20px rgba(0,0,0,0.1); background: white;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    resize: vertical;
-    font-family: 'Arial', sans-serif;
-    font-size: 0.9rem;
-    box-sizing: border-box;
 }
 
-.konva-container {
-    background-color: #ffffff;
-    border: 1px solid #ccc;
-    box-shadow: var(--shadow-medium);
-    /* Dimensions are set by JS */
+/* Canvas Controls */
+.canvas-controls {
+    display: flex; align-items: center; margin-top: 15px; background-color: var(--fg-color);
+    padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+.canvas-controls button {
+    width: 35px; height: 35px; border: none; font-size: 1rem; cursor: pointer;
+    background: var(--primary-color); color: white; border-radius: 5px;
+}
+.canvas-controls span { margin: 0 10px; font-weight: bold; }
+.download-section { margin-left: 20px; }
+.download-section button { width: auto; height: auto; padding: 8px 12px; font-size: 14px; }
 
-/* --- Properties Panel --- */
-.properties-panel, .layers-panel {
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
+/* Layers Panel */
+#layers-list { list-style: none; padding: 0; margin: 0; }
+#layers-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px; border: 1px solid var(--border-color); margin-bottom: 5px;
+    border-radius: 4px; background: var(--bg-color); word-break: break-all;
 }
-
-.properties-panel:last-child, .layers-panel:last-child {
-    border-bottom: none;
+#layers-list li.active { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-color); }
+.layer-name { flex-grow: 1; margin-right: 10px; cursor: pointer; }
+.layer-controls button {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    color: var(--text-color); margin-left: 5px; padding: 5px; border-radius: 3px;
 }
-
-.property-section {
-    margin-top: 15px;
-}
-
-.info-message {
-    padding: 15px;
-    background-color: #e9f7ef;
-    border: 1px solid #d4edda;
-    border-radius: 4px;
-    color: #155724;
-    text-align: center;
-    font-style: italic;
-}
-
-.prop-group {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-    gap: 10px;
-    font-size: 0.95rem;
-}
-
-.prop-group label {
-    flex-basis: 90px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.prop-group input[type="text"],
-.prop-group input[type="number"],
-.prop-group input[type="range"],
-.prop-group input[type="color"],
-.prop-group select {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-
-.prop-group input[type="range"] {
-    -webkit-appearance: none;
-    height: 8px;
-    background: var(--border-color);
-    outline: none;
-    opacity: 0.7;
-    transition: opacity .2s;
-    flex: 1;
-}
-
-.prop-group input[type="range"]:hover {
-    opacity: 1;
-}
-
-.prop-group input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.prop-group input[type="range"]::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.prop-group span {
-    width: 40px;
-    text-align: right;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.prop-group input[type="checkbox"] {
-    width: auto;
-    flex: none;
-    margin-left: 0;
-}
-
-.text-align-buttons, .font-style-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 5px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-}
-
-.text-align-buttons button, .font-style-buttons button {
-    padding: 8px 12px;
-    background-color: var(--secondary-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s;
-}
-
-.text-align-buttons button:hover, .font-style-buttons button:hover {
-    background-color: #5a6268;
-}
-
-.text-align-buttons button.active, .font-style-buttons button.active {
-    background-color: var(--primary-color);
-}
-
-/* --- Action Buttons (General) --- */
-button, .action-button {
-    padding: 10px 15px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    white-space: nowrap;
-}
-
-button:hover, .action-button:hover {
-    background-color: var(--button-hover-bg);
-    transform: translateY(-1px);
-}
-
-button:active, .action-button:active {
-    background-color: var(--button-active-bg);
-    transform: translateY(0);
-}
-
-button:disabled, .action-button:disabled {
-    background-color: var(--secondary-color);
-    cursor: not-allowed;
-    opacity: 0.6;
-    transform: none;
-}
-
-.action-button {
-    width: 100%;
-    margin-top: 15px;
-}
-
-/* --- Layers List --- */
-.layers-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 500px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.layers-list li {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid var(--border-color);
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.layers-list li:last-child {
-    border-bottom: none;
-}
-
-.layers-list li:hover {
-    background-color: #f0f0f0;
-}
-
-.layers-list li.selected {
-    background-color: var(--selected-item-bg);
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.layers-list li .layer-icon {
-    margin-right: 10px;
-    font-size: 1.2rem;
-}
-
-.layers-list li .layer-name {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.layers-list li .layer-actions {
-    display: flex;
-    gap: 5px;
-    flex-shrink: 0;
-}
-
-.layers-list li .layer-actions button {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 5px 8px;
-    font-size: 0.8rem;
-    border-radius: 3px;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.layers-list li .layer-actions button:hover {
-    background-color: #e0e0e0;
-}
-
-.layers-list li .layer-actions button.layer-del-btn {
-    color: var(--danger-color);
-    border-color: var(--danger-color);
-}
-.layers-list li .layer-actions button.layer-del-btn:hover {
-    background-color: var(--danger-color);
-    color: white;
-}
-
-.layer-actions-bottom {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-/* --- Utility Classes --- */
-.hidden {
-    display: none !important;
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-    .editor-container {
-        flex-direction: column;
-    }
-
-    .left-sidebar, .right-sidebar {
-        width: 100%;
-        max-height: 400px;
-        border-right: none;
-        border-left: none;
-        border-bottom: 1px solid var(--border-color);
-    }
-    .right-sidebar {
-        border-top: 1px solid var(--border-color);
-    }
-    .canvas-wrapper {
-        height: auto;
-        padding: 10px;
-    }
-    .quick-notepad {
-        margin-bottom: 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    .top-bar {
-        align-items: center;
-        text-align: center;
-    }
-    .header-content {
-        flex-direction: column; /* Stack logo and controls vertically */
-    }
-    .top-bar .header-link {
-        width: 100%; /* Make logo take full width */
-        justify-content: center; /* Center the logo text */
-    }
-    .top-bar h1 {
-        font-size: 1.3rem;
-        width: 100%;
-    }
-    .header-controls {
-        flex-direction: column;
-        gap: 10px;
-    }
-    .tool-buttons {
-        width: 100%;
-        justify-content: center;
-    }
-    .tool-buttons button {
-        flex-grow: 1;
-    }
-    .canvas-controls {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    .sidebar {
-        padding: 15px;
-    }
-    .sidebar h2 {
-        font-size: 1.1rem;
-    }
-    .prop-group label {
-        flex-basis: 70px;
-    }
-}
+.layer-controls button:hover { background-color: var(--border-color); }
