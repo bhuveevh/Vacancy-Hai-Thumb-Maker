@@ -3,175 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VACANCY HAI ONLINE - Graphics Editor</title>
+    <title>VH-Thumbnail Maker Pro</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/konva@9.3.11/konva.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="top-bar">
-        <div class="header-content">
-            <a href="https://vacancyhai.online/" target="_blank" class="header-link">
-                <h1>VACANCY HAI ONLINE Editor</h1>
-            </a>
-            <div class="header-controls">
-                <div class="tool-buttons">
-                    <button id="addRectBtn">Add Rectangle</button>
-                    <button id="addCircleBtn">Add Circle</button>
-                    <button id="addTextBtn">Add Text</button>
-                    <button id="addImageBtn">Add Image</button>
-                    <input type="file" id="imageUpload" accept="image/*" class="hidden">
-                    <button id="addLineBtn">Add Line</button>
-                    <button id="uploadFontBtn">Upload Custom Font</button>
-                    <input type="file" id="fontUpload" accept=".ttf,.otf,.woff,.woff2" multiple class="hidden">
-                    <div class="canvas-controls">
-                        <label for="bgColorPicker">Canvas Background:</label>
-                        <input type="color" id="bgColorPicker" value="#F0F0F0">
-                        <button id="downloadWebPBtn">Download WebP</button>
+
+    <div class="app-container">
+        <!-- TOP HEADER -->
+        <header class="app-header">
+            <h1>VH-Thumbnail Maker</h1>
+            <div class="tools">
+                <button id="add-text"><i class="fa-solid fa-font"></i> Add Text</button>
+                <button id="add-line"><i class="fa-solid fa-minus"></i> Add Line</button>
+                <label for="image-upload" class="custom-file-upload"><i class="fa-solid fa-image"></i> Add Image</label>
+                <input type="file" id="image-upload" accept="image/*" style="display:none;">
+                <label for="font-upload" class="custom-file-upload"><i class="fa-solid fa-upload"></i> Import Font</label>
+                <input type="file" id="font-upload" accept=".ttf, .otf, .woff, .woff2" style="display:none;">
+            </div>
+            <div class="header-right">
+                <button id="theme-toggle" title="Toggle Theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- LEFT SIDEBAR: Properties -->
+            <aside class="sidebar left-sidebar">
+                <h3><i class="fa-solid fa-sliders"></i> Properties</h3>
+                <div id="properties-panel" class="hidden">
+                    
+                    <!-- Canvas Properties -->
+                    <details class="prop-section" open>
+                        <summary>Canvas</summary>
+                        <div class="prop-content">
+                            <label for="canvas-bg-color">Background Color:</label>
+                            <div class="color-input-wrapper">
+                                <input type="color" id="canvas-bg-color" value="#dddddd">
+                                <button class="color-picker-trigger" title="Pick color from screen"><i class="fa-solid fa-eye-dropper"></i></button>
+                            </div>
+                        </div>
+                    </details>
+                    
+                    <!-- Common Properties (for any selected object) -->
+                    <div id="common-props" class="hidden">
+                        <details class="prop-section" open>
+                            <summary>Shadow</summary>
+                            <div class="prop-content">
+                                <input type="checkbox" id="shadow-enable"> <label for="shadow-enable">Enable Shadow</label>
+                                <div id="shadow-controls" class="hidden">
+                                    <label>Color: <div class="color-input-wrapper"><input type="color" id="shadow-color"><button class="color-picker-trigger" title="Pick color"><i class="fa-solid fa-eye-dropper"></i></button></div></label>
+                                    <label>Blur: <input type="range" id="shadow-blur" min="0" max="50" value="10"></label>
+                                    <label>Offset X: <input type="range" id="shadow-offset-x" min="-50" max="50" value="5"></label>
+                                    <label>Offset Y: <input type="range" id="shadow-offset-y" min="-50" max="50" value="5"></label>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Text Properties -->
+                    <div id="text-props" class="hidden">
+                         <details class="prop-section" open>
+                            <summary>Text</summary>
+                            <div class="prop-content">
+                                <label>Style:</label>
+                                <button id="text-bold"><b>B</b></button>
+                                <button id="text-italic"><i>I</i></button>
+                                <br><br>
+                                <label>Alignment:</label>
+                                <div class="align-buttons">
+                                    <button id="align-left"><i class="fa-solid fa-align-left"></i></button>
+                                    <button id="align-center"><i class="fa-solid fa-align-center"></i></button>
+                                    <button id="align-right"><i class="fa-solid fa-align-right"></i></button>
+                                </div>
+                                <br>
+                                <label>Color:</label>
+                                <div class="color-input-wrapper">
+                                    <input type="color" id="text-color">
+                                    <button class="color-picker-trigger" title="Pick color"><i class="fa-solid fa-eye-dropper"></i></button>
+                                </div>
+                                <label for="font-size">Font Size:</label>
+                                <input type="range" id="font-size" min="10" max="200" value="40">
+                                <label for="font-family-select">Font Family:</label>
+                                <select id="font-family-select">
+                                    <option value="Arial">Arial</option>
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Courier New">Courier New</option>
+                                </select>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Image Properties -->
+                    <div id="image-props" class="hidden">
+                        <details class="prop-section" open>
+                            <summary>Image</summary>
+                            <div class="prop-content">
+                                <label for="image-corners">Rounded Corners:</label>
+                                <input type="range" id="image-corners" min="0" max="200" value="0">
+                            </div>
+                        </details>
                     </div>
                 </div>
-            </div>
+            </aside>
+
+            <!-- CANVAS AREA -->
+            <main class="canvas-main-area">
+                <div class="note-box-container">
+                    <input type="text" class="note-box" placeholder="Aap yahan notes ya temporary text likh sakte hain...">
+                </div>
+                <div id="canvas-wrapper">
+                    <canvas id="thumbnail-canvas"></canvas>
+                </div>
+                <div class="canvas-controls">
+                    <button id="zoom-in" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    <span>Zoom</span>
+                    <button id="zoom-out" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                    <div class="download-section">
+                        <button id="download-jpg">Download JPG</button>
+                        <button id="download-webp">Download WEBP</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT SIDEBAR: Layers -->
+            <aside class="sidebar right-sidebar">
+                <h3><i class="fa-solid fa-layer-group"></i> Layers</h3>
+                <ul id="layers-list"></ul>
+            </aside>
         </div>
-    </header>
+    </div>
 
-    <main class="editor-container">
-        <aside class="sidebar left-sidebar">
-            <div class="properties-panel">
-                <h2>Element Properties</h2>
-                <div id="noElementSelected" class="info-message">
-                    No element selected. Click on an element on the canvas to edit its properties.
-                </div>
-                <div id="elementProperties" class="hidden property-section">
-                    <div class="prop-group">
-                        <label for="propX">X:</label>
-                        <input type="range" id="propX" min="-1000" max="1000" step="1" value="0">
-                        <span id="valX">0</span>
-                    </div>
-                    <div class="prop-group">
-                        <label for="propY">Y:</label>
-                        <input type="range" id="propY" min="-1000" max="1000" step="1" value="0">
-                        <span id="valY">0</span>
-                    </div>
-                    <div class="prop-group">
-                        <label for="propRotation">Rotation:</label>
-                        <input type="range" id="propRotation" min="0" max="360" step="1" value="0">
-                        <span id="valRotation">0</span>°
-                    </div>
-
-                    <div class="prop-group" id="propFillColorGroup">
-                        <label for="propFillColor">Fill Color:</label>
-                        <input type="color" id="propFillColor" value="#FFFFFF">
-                    </div>
-
-                    <div class="prop-group" id="propCornerRadiusGroup">
-                        <label for="propCornerRadius">Corner Radius:</label>
-                        <input type="range" id="propCornerRadius" min="0" max="100" step="1" value="0">
-                        <span id="valCornerRadius">0</span>px
-                    </div>
-
-                    <div id="textProperties" class="hidden">
-                        <div class="prop-group">
-                            <label for="propTextContent">Text Content:</label>
-                            <input type="text" id="propTextContent" placeholder="Enter text">
-                        </div>
-                        <div class="prop-group">
-                            <label for="propFontFamily">Font Family:</label>
-                            <select id="propFontFamily">
-                                <option value="Arial">Arial</option>
-                                <option value="Verdana">Verdana</option>
-                                <option value="Georgia">Georgia</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                                <option value="Courier New">Courier New</option>
-                            </select>
-                        </div>
-                        <div class="prop-group">
-                            <label for="propTextColor">Text Color:</label>
-                            <input type="color" id="propTextColor" value="#000000">
-                        </div>
-                        <div class="prop-group text-align-buttons">
-                            <button id="alignLeft" title="Align Left">⬅️</button>
-                            <button id="alignCenter" title="Align Center">↔️</button>
-                            <button id="alignRight" title="Align Right">➡️</button>
-                        </div>
-                        <div class="prop-group font-style-buttons">
-                            <button id="toggleBold" title="Bold"><strong>B</strong></button>
-                            <button id="toggleItalic" title="Italic"><em>I</em></button>
-                        </div>
-                    </div>
-
-                    <div id="lineProperties" class="hidden">
-                        <div class="prop-group">
-                            <label for="propLineLength">Line Length:</label>
-                            <input type="range" id="propLineLength" min="10" max="500" step="1" value="100">
-                            <span id="valLineLength">100</span>px
-                        </div>
-                        <div class="prop-group">
-                            <label for="propLineThickness">Thickness:</label>
-                            <input type="range" id="propLineThickness" min="1" max="20" step="1" value="5">
-                            <span id="valLineThickness">5</span>px
-                        </div>
-                        <div class="prop-group">
-                            <label for="propLineColor">Line Color:</label>
-                            <input type="color" id="propLineColor" value="#000000">
-                        </div>
-                    </div>
-
-                    <div class="shadow-properties property-section">
-                        <h3>Shadow</h3>
-                        <div class="prop-group">
-                            <label for="shadowEnable">Enable Shadow:</label>
-                            <input type="checkbox" id="shadowEnable">
-                        </div>
-                        <div class="prop-group">
-                            <label for="shadowColor">Color:</label>
-                            <input type="color" id="shadowColor" value="#000000">
-                        </div>
-                        <div class="prop-group">
-                            <label for="shadowBlur">Blur:</label>
-                            <input type="range" id="shadowBlur" min="0" max="50" step="1" value="0">
-                            <span id="valShadowBlur">0</span>
-                        </div>
-                        <div class="prop-group">
-                            <label for="shadowOffsetX">Offset X:</label>
-                            <input type="range" id="shadowOffsetX" min="-50" max="50" step="1" value="0">
-                            <span id="valShadowOffsetX">0</span>
-                        </div>
-                        <div class="prop-group">
-                            <label for="shadowOffsetY">Offset Y:</label>
-                            <input type="range" id="shadowOffsetY" min="-50" max="50" step="1" value="0">
-                            <span id="valShadowOffsetY">0</span>
-                        </div>
-                    </div>
-
-                    <button id="toggleLock" class="action-button">Lock Element</button>
-                </div>
-            </div>
-        </aside>
-
-        <section class="canvas-wrapper">
-            <div class="quick-notepad">
-                <h2>Scratchpad / Quick Text</h2>
-                <textarea id="quickTextArea" placeholder="Write notes or text snippets here..."></textarea>
-            </div>
-            <div id="konvaContainer" class="konva-container"></div>
-        </section>
-
-        <aside class="sidebar right-sidebar">
-            <div class="layers-panel property-section">
-                <h2>Layers</h2>
-                <ul id="layersList" class="layers-list">
-                    <li class="info-message">No layers yet. Add elements to see them here.</li>
-                </ul>
-                <div class="layer-actions-bottom">
-                    <button id="moveLayerUp" title="Move Up">⬆️</button>
-                    <button id="moveLayerDown" title="Move Down">⬇️</button>
-                </div>
-            </div>
-        </aside>
-    </main>
-
-    <script src="script.js"></script>
+    <!-- Libraries and Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
