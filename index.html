@@ -19,8 +19,14 @@
                 <button id="add-line"><i class="fa-solid fa-minus"></i> Add Line</button>
                 <label for="image-upload" class="custom-file-upload"><i class="fa-solid fa-image"></i> Add Image</label>
                 <input type="file" id="image-upload" accept="image/*" style="display:none;">
-                <label for="font-upload" class="custom-file-upload"><i class="fa-solid fa-upload"></i> Import Font</label>
-                <input type="file" id="font-upload" accept=".ttf, .otf, .woff, .woff2" style="display:none;">
+                
+                <!-- === BADLAV YAHAN KIYE GAYE HAIN === -->
+                <label for="font-upload" class="custom-file-upload"><i class="fa-solid fa-upload"></i> Import Fonts</label>
+                <input type="file" id="font-upload" accept=".ttf, .otf, .woff, .woff2" style="display:none;" multiple>
+                
+                <button id="clear-fonts" title="Clear all saved fonts from browser"><i class="fa-solid fa-eraser"></i> Clear Fonts</button>
+                <!-- === BADLAV KHATAM === -->
+
             </div>
             <div class="header-right">
                 <button id="theme-toggle" title="Toggle Theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
